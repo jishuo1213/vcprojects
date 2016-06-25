@@ -16,7 +16,7 @@
 #include <string>
 #include <algorithm>
 
-#include "urlcode.h"
+#include "strutil.h"
 #include "DownloadInfo.h"
 
 

@@ -4,6 +4,7 @@ static FILE *fp = NULL;
 
 static size_t write_callback(void *ptr,size_t size,size_t nmemb,void *stream)
 {
+
 	int len = size * nmemb;
 	int written = len;
 	DownloadInfo *downloadinfo = (DownloadInfo*)stream;
@@ -74,10 +75,10 @@ int DownLoad(char *url,DownloadInfo *downloadInfo)
 {
 	CURL *curl;
 	CURLcode res;
-	curl = downloadInfo->GetCurl();
+	curl = curl_easy_init();;
 	if(curl)
 	{
-		curl_easy_reset(curl);
+		downloadInfo->SetCurl(curl);
 		struct curl_slist *chunk = NULL;
 		if(downloadInfo->check_is_tempfile_exits()){
 			char bytes[30];
@@ -92,8 +93,12 @@ int DownLoad(char *url,DownloadInfo *downloadInfo)
 		}
 
 		curl_easy_setopt(curl,CURLOPT_URL,url);
+		curl_easy_setopt(curl,CURLOPT_VERBOSE,1L);
 		curl_easy_setopt(curl,CURLOPT_WRITEFUNCTION,	write_callback);
 		curl_easy_setopt(curl,CURLOPT_WRITEDATA,downloadInfo);
+		curl_easy_setopt(curl,CURLOPT_HEADERDATA,downloadInfo);
+		curl_easy_setopt(curl,CURLOPT_HEADER,1);
+		curl_easy_setopt(curl,CURLOPT_HEADERFUNCTION,header_callback);
 		curl_easy_setopt(curl,CURLOPT_NOBODY,FALSE);
 		curl_easy_setopt(curl,CURLOPT_NOPROGRESS,FALSE);
 		curl_easy_setopt(curl,CURLOPT_XFERINFOFUNCTION,xferinfo);
@@ -123,14 +128,17 @@ int GetDownloadInfo(DownloadInfo *downlaodInfo,char *url)
 	if(curl){
 		downlaodInfo->SetCurl(curl);
 		curl_easy_setopt(curl,CURLOPT_URL,url);
+		curl_easy_setopt(curl,CURLOPT_VERBOSE,0L);
 		curl_easy_setopt(curl,CURLOPT_HEADERDATA,downlaodInfo);
+		curl_easy_setopt(curl,CURLOPT_HEADER,1);
 		curl_easy_setopt(curl,CURLOPT_HEADERFUNCTION,header_callback);
 		curl_easy_setopt(curl,CURLOPT_NOBODY,true);
 		res = curl_easy_perform(curl);
 		if(res == CURLE_OK){
 			return 1;
 		}
-		std::cerr<<curl_easy_strerror(res);
+
+		std::cerr<<"res"<<res<<curl_easy_strerror(res);
 		return 0;
 	}
 	return 0;
@@ -141,16 +149,17 @@ int _tmain(int argc, _TCHAR* argv[])
 	if(argc == 3){
 		TCHAR * inUrl = argv[1];
 		TCHAR* filepath = argv[2];
+		TCHAR *doc_id = GetDocId(inUrl);
 		int  iLength = WideCharToMultiByte(CP_ACP, 0, inUrl, -1, NULL, 0, NULL, NULL);
 		char *url = new char[iLength];
 		WideCharToMultiByte(CP_ACP, 0, inUrl, -1, url, iLength, NULL, NULL);   
-		DownloadInfo downloadInfo(url,filepath);
-		if(GetDownloadInfo(&downloadInfo,url)){
-			_ftprintf(stdout,_T("GetDownloadInfo Success\n"));
-		}else{
-			_ftprintf(stdout,_T("GetDownloadInfo fail\n"));
-			return 0;
-		}
+		DownloadInfo downloadInfo(url,filepath,doc_id);
+		//if(GetDownloadInfo(&downloadInfo,url)){
+		//	_ftprintf(stdout,_T("GetDownloadInfo Success\n"));
+		//}else{
+		//	_ftprintf(stdout,_T("GetDownloadInfo fail\n"));
+		//	return 0;
+		//}
 
 		if(DownLoad(url,&downloadInfo)){
 			_ftprintf(stdout,_T("Download OK \n"));

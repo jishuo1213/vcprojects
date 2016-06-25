@@ -7,27 +7,24 @@ const int MINIMAL_PROGRESS_FUNCTIONALITY_INTERVAL = 1;
 class DownloadInfo
 {
 public:
-	DownloadInfo(CURL *curl,char *download_url,TCHAR *filepath):
-		current_curl(curl),url(download_url),file_path(filepath)
+	DownloadInfo(CURL *curl,char *download_url,TCHAR *filepath,TCHAR *docId):
+		current_curl(curl),url(download_url),file_path(filepath),doc_id(docId)
 	{
 		file_name = NULL;
 		file_size = 0;
 		last_run_time = 0;
 		downloaded_size = 0;
-		temp_file_path = NULL;
-		//int length = _tcsclen(filepath) + 1;
-		//temp_file_path = new TCHAR[length];
-		//_tcscpy_s(temp_file_path,length,filepath);
+		init_temp_file_name(filepath,docId);
 	}
 
-	DownloadInfo(char *download_url,TCHAR *filepath):url(download_url),file_path(filepath)
+	DownloadInfo(char *download_url,TCHAR *filepath,TCHAR *docid):url(download_url),file_path(filepath),doc_id(docid)
 	{
 		current_curl = NULL;
 		file_name = NULL;
 		file_size = 0;
 		last_run_time = 0;
 		downloaded_size = 0;
-		temp_file_path = NULL;
+		init_temp_file_name(filepath,docid);
 	}
 
 	DownloadInfo()
@@ -37,6 +34,7 @@ public:
 		file_path = NULL;
 		file_name = NULL;
 		temp_file_path = NULL;
+		doc_id = NULL;
 		file_size = 0;
 		last_run_time = 0;
 		downloaded_size = 0;
@@ -47,9 +45,11 @@ public:
 		this->file_name = filename;
 		TCHAR *fix = _T(".htdownload");
 		_tcscat_s(file_path,_tcsclen(file_path)+_tcsclen(file_name)+1,file_name);
-		temp_file_path = new TCHAR[_tcsclen(file_path)+_tcsclen(file_name)+_tcsclen(fix)+1];
-		_tcscpy_s(temp_file_path,_tcsclen(file_path)+1,file_path);
-		_tcscat_s(temp_file_path,_tcsclen(temp_file_path)+_tcsclen(fix)+1,fix);
+		//temp_file_path = new TCHAR[_tcsclen(file_path)+_tcsclen(fix)+_tcsclen(doc_id)+1];
+		//_tcscpy_s(temp_file_path,_tcsclen(file_path)+1,file_path);
+		//_tcscat_s(temp_file_path,_tcsclen(temp_file_path)+_tcsclen(doc_id)+1,doc_id);
+		//_tcscat_s(temp_file_path,_tcsclen(temp_file_path)+_tcsclen(fix)+1,fix);
+		//std::wcout << temp_file_path << std::endl;
 	}
 
 	void SetCurl(CURL *curl)
@@ -103,9 +103,12 @@ private:
 	char *url;
 	TCHAR *file_path;
 	TCHAR *temp_file_path;
+	TCHAR *doc_id;
 	const TCHAR *file_name;
 	long file_size;
 	long downloaded_size;
 	double last_run_time;
+
+	void init_temp_file_name(TCHAR *filepath,TCHAR *docid);
 };
 
