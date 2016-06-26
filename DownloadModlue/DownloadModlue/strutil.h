@@ -4,6 +4,6 @@
 
 BOOL UrlEncode(const char* szSrc, char* pBuf, int cbBufLen, BOOL bUpperCase);
 
-WCHAR* UrlDecode(const char* szSrc);
+WCHAR* UrlDecode(LPCSTR szSrc);
 
 TCHAR* GetDocId(TCHAR * url);
