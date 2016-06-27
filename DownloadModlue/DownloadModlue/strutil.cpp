@@ -2,6 +2,20 @@
 
 LPCSTR trim(const char *str);
 bool isHexNum(char c);
+
+std::string BuildProgressResponseJson(FILE_LENGTH speed,FILE_LENGTH downloaded_size,FILE_LENGTH total_size,double time)
+{
+	Json::Value info;
+	info["speed"] = speed;
+	info["downloaded"] = downloaded_size;
+	info["total"] = total_size;
+	info["duration"] = time;
+	Json::Value responese;
+	responese["status_code"] = 1;
+	responese["info"] = info;
+	return responese.toStyledString();
+}
+
 BOOL UrlEncode(const char* szSrc, char* pBuf, int cbBufLen, BOOL bUpperCase)
 {
     if(szSrc == NULL || pBuf == NULL || cbBufLen <= 0)
@@ -126,8 +140,6 @@ TCHAR* GetDocId(TCHAR *url)
 	TCHAR *doc_id = new TCHAR[docid_length + 1];
 	ZeroMemory(doc_id,docid_length + 1);
 	_tcsnccpy_s(doc_id,docid_length + 1,doc_start + 7,docid_length);
-	std::cout << _tcslen(doc_id)<<std::endl;
-	std::wcout << doc_id <<std::endl;
 	delete [] src_url;
 	return doc_id;
 }
@@ -145,4 +157,21 @@ LPCSTR trim(const char *str)
 bool isHexNum(char c)
 {
 	return (c>='0' && c<='9')||(c>='A' && c<='F')||(c>='a' && c<='f');
+}
+
+void FileLengthToString(FILE_LENGTH file_size,char *bytes)
+{
+	  std::stringstream a;
+      a << file_size;
+	  const char* size = a.str().c_str();
+      strcpy_s(bytes,strlen(size) + 1,size);
+}
+
+FILE_LENGTH StringToFileLength(char *bytes)
+{
+	std::stringstream strValue;
+	strValue << bytes;
+	FILE_LENGTH value;
+	strValue >> value;
+	return value;
 }

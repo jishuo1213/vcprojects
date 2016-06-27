@@ -38,20 +38,21 @@ static size_t header_callback(void *ptr,size_t size,size_t rmemb,void *stream)
 		strcpy_s(urlcode_filename,length,(src + 9));
 		WCHAR* fileName = UrlDecode(urlcode_filename);
 		delete [] urlcode_filename;
+		_tprintf(_T("%s \n"),fileName);
 		downloadInfo->SetFileName(fileName);
 
 		//std::wcsout.imbue(std::locale("CHS"));
 		//std::wcout << downloadInfo->get_file_path() << std::endl;
 		//_ftprintf(stdout,_T("%s \n"),downloadInfo->get_file_path());
 		//std::cout << _tcsclen(downloadInfo->get_file_path())<<std::endl;
-	}else if(strstr(str,"File-Size")){
-		int length = strlen(str) - 10;
+	}else if(strstr(str,"Content-Length")){
+		int length = strlen(str) - 15;
 		char *filesize = new char[length];
-		strcpy_s(filesize,length,str+11);
-		long size = atol(filesize);
+		strcpy_s(filesize,length,str+16);
+		FILE_LENGTH size = StringToFileLength(filesize);
 		delete [] filesize;
 		downloadInfo->SetFileSize(size);
-		//fprintf(stdout,"%d\n",downloadInfo->GetFileSize());
+		_tprintf(_T("file size =======%d\n"),size);
 	}
 	return rmemb * size;
 }
@@ -63,10 +64,18 @@ static int xferinfo(void *p,curl_off_t dltotal,curl_off_t dlnow,curl_off_t ultot
 	curtime = myp->get_cur_run_time();
 	if(myp->check_progress_time(curtime)){
 		myp->SetLastRunTime(curtime);
-		fprintf(stdout,"TOTAL TIME: %f\n",curtime);
-		fprintf(stdout, "UP: %" CURL_FORMAT_CURL_OFF_T " of %" CURL_FORMAT_CURL_OFF_T
-          "  DOWN: %" CURL_FORMAT_CURL_OFF_T " of %d"
-          "\r\n",ulnow, ultotal, dlnow, myp->GetFileSize());
+		FILE_LENGTH speed;
+		if(myp->IsBreakPointDownload()) {
+			static FILE_LENGTH prvious_download = 0;
+			speed = dlnow - prvious_download;
+			prvious_download = dlnow;
+			myp->SetDownloadedSize(speed+myp->GetDownloadedSize());
+		} else {
+			speed = dlnow - myp->GetDownloadedSize();
+			myp->SetDownloadedSize(dlnow);
+		}
+		std::cout <<BuildProgressResponseJson(speed,myp->GetDownloadedSize(),myp->GetFileSize(),curtime)<<std::endl;
+		//fprintf(stdout, BuildProgressResponseJson(speed,dlnow,myp->GetFileSize(),curtime));
 	}
 	return 0;
 }
@@ -82,7 +91,8 @@ int DownLoad(char *url,DownloadInfo *downloadInfo)
 		struct curl_slist *chunk = NULL;
 		if(downloadInfo->check_is_tempfile_exits()){
 			char bytes[30];
-			_ltoa_s(downloadInfo->GetDownloadedSize(),bytes,10);
+			ZeroMemory(bytes,30);
+			FileLengthToString(downloadInfo->GetDownloadedSize(),bytes);
 			char *header = new char[12+strlen(bytes)+2];
 			strcpy_s(header,13,"Range:bytes=");
 			strcat_s(header,strlen(header)+strlen(bytes)+1,bytes);
@@ -97,7 +107,7 @@ int DownLoad(char *url,DownloadInfo *downloadInfo)
 		curl_easy_setopt(curl,CURLOPT_WRITEFUNCTION,	write_callback);
 		curl_easy_setopt(curl,CURLOPT_WRITEDATA,downloadInfo);
 		curl_easy_setopt(curl,CURLOPT_HEADERDATA,downloadInfo);
-		curl_easy_setopt(curl,CURLOPT_HEADER,1);
+		curl_easy_setopt(curl,CURLOPT_HEADER,0);
 		curl_easy_setopt(curl,CURLOPT_HEADERFUNCTION,header_callback);
 		curl_easy_setopt(curl,CURLOPT_NOBODY,FALSE);
 		curl_easy_setopt(curl,CURLOPT_NOPROGRESS,FALSE);
@@ -170,14 +180,12 @@ int _tmain(int argc, _TCHAR* argv[])
 			int moveres = 0;
 			if(fp)
 				fclose(fp);
-			if(int moveres = MoveFile(downloadInfo.get_temp_file_path(),downloadInfo.get_file_path())){
+			if(downloadInfo.RenameFileAfterDownload()){
 				std::cout << "rename success"<<std::endl;
+			}else{
+				std::cout <<"rename failed"<<std::endl;
 			}
-			if(!moveres){
-				std::cout << GetLastError()<<std::endl;
-			}
-			std::cout << moveres<<std::endl;
-		}else{
+		} else {
 			_ftprintf(stdout,_T("error \n"));
 		}
 		return 0;

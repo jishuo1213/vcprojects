@@ -2,7 +2,9 @@
 #include <tchar.h>
 #include <curl\curl.h>
 
-const int MINIMAL_PROGRESS_FUNCTIONALITY_INTERVAL = 1;
+const float MINIMAL_PROGRESS_FUNCTIONALITY_INTERVAL = 1.0;
+
+typedef unsigned long long FILE_LENGTH;
 
 class DownloadInfo
 {
@@ -10,11 +12,15 @@ public:
 	DownloadInfo(CURL *curl,char *download_url,TCHAR *filepath,TCHAR *docId):
 		current_curl(curl),url(download_url),file_path(filepath),doc_id(docId)
 	{
+		/*file_path = new TCHAR[_tcslen(filepath) + 1];
+		ZeroMemory(file_path,_tcslen(filepath) + 1);
+		_tcscpy_s(file_path,_tcslen(filepath) + 1,filepath);*/
 		file_name = NULL;
 		file_size = 0;
 		last_run_time = 0;
 		downloaded_size = 0;
 		init_temp_file_name(filepath,docId);
+		is_break_point_download = false;
 	}
 
 	DownloadInfo(char *download_url,TCHAR *filepath,TCHAR *docid):url(download_url),file_path(filepath),doc_id(docid)
@@ -25,6 +31,7 @@ public:
 		last_run_time = 0;
 		downloaded_size = 0;
 		init_temp_file_name(filepath,docid);
+		is_break_point_download = false;
 	}
 
 	DownloadInfo()
@@ -38,6 +45,7 @@ public:
 		file_size = 0;
 		last_run_time = 0;
 		downloaded_size = 0;
+		is_break_point_download = false;
 	}
 
 	void SetFileName(const TCHAR *filename)
@@ -57,18 +65,24 @@ public:
 		this->current_curl = curl;
 	}
 
-	long GetDownloadedSize()
+	FILE_LENGTH GetDownloadedSize()
 	{
 		return downloaded_size;
+	}
+	
+	void SetDownloadedSize(FILE_LENGTH downloaded)
+	{
+		downloaded_size = downloaded;
 	}
 
 	bool check_progress_time(double &curtime);
 	double get_cur_run_time();
 	bool check_is_tempfile_exits();
+	int RenameFileAfterDownload();
 
-	void SetFileSize(long size)
+	void SetFileSize(FILE_LENGTH size)
 	{
-		file_size = size;
+		file_size = size + downloaded_size;
 	}
 
 	void SetLastRunTime(double time)
@@ -86,7 +100,12 @@ public:
 		 return temp_file_path;
 	}
 
-	long GetFileSize()
+	bool IsBreakPointDownload()
+	{
+		return is_break_point_download;
+	}
+
+	FILE_LENGTH GetFileSize()
 	{
 		return file_size;
 	}
@@ -105,9 +124,11 @@ private:
 	TCHAR *temp_file_path;
 	TCHAR *doc_id;
 	const TCHAR *file_name;
-	long file_size;
-	long downloaded_size;
+	FILE_LENGTH file_size;
+	FILE_LENGTH downloaded_size;
 	double last_run_time;
+	bool is_break_point_download;
+
 
 	void init_temp_file_name(TCHAR *filepath,TCHAR *docid);
 };
