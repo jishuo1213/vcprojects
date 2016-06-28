@@ -39,13 +39,11 @@ void DownloadInfo::init_temp_file_name(TCHAR *filepath,TCHAR *docid)
 {
 	TCHAR *fix = _T(".htdownload");
 	int length = _tcslen(filepath)+_tcslen(docid)+_tcslen(fix)+ 1;
-	_tprintf(_T("length======== %d"),length);
 	temp_file_path = new TCHAR[length];
 	ZeroMemory(temp_file_path,length);
 	_tcscpy_s(temp_file_path,_tcslen(filepath)+1,filepath);
 	_tcscat_s(temp_file_path,_tcslen(temp_file_path)+_tcslen(docid)+1,docid);
 	_tcscat_s(temp_file_path,_tcslen(temp_file_path)+_tcslen(fix)+1,fix);
-	std::wcout << temp_file_path <<std::endl;
 }
 
 int DownloadInfo::RenameFileAfterDownload()
@@ -85,7 +83,11 @@ int DownloadInfo::RenameFileAfterDownload()
 
 DownloadInfo::~DownloadInfo(void)
 {
-	delete [] file_name;
-	delete [] temp_file_path;
-	delete [] doc_id;
+	if(file_name)
+		delete [] file_name;
+	_tprintf(_T("%s \n"),temp_file_path);
+	if(temp_file_path)
+		delete [] temp_file_path;
+	if(doc_id)
+		delete [] doc_id;
 }

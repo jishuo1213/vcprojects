@@ -16,6 +16,36 @@ std::string BuildProgressResponseJson(FILE_LENGTH speed,FILE_LENGTH downloaded_s
 	return responese.toStyledString();
 }
 
+std::string BuildSuccessResponseJson()
+{
+	Json::Value info;
+	info["message"] = "下载成功";
+	Json::Value responese;
+	responese["status_code"] = 0;
+	responese["info"] = info;
+	return responese.toStyledString();
+}
+
+std::string BuildRenameFailedJson()
+{
+	Json::Value info;
+	info["message"] = "下载成功,但是重命名文件失败";
+	Json::Value responese;
+	responese["status_code"] = 3;
+	responese["info"] = info;
+	return responese.toStyledString();
+}
+
+std::string BuildFailedResponseJson()
+{
+	Json::Value info;
+	info["message"] = "下载失败，请检查网络";
+	Json::Value responese;
+	responese["status_code"] = 2;
+	responese["info"] = info;
+	return responese.toStyledString();
+}
+
 BOOL UrlEncode(const char* szSrc, char* pBuf, int cbBufLen, BOOL bUpperCase)
 {
     if(szSrc == NULL || pBuf == NULL || cbBufLen <= 0)
@@ -159,12 +189,16 @@ bool isHexNum(char c)
 	return (c>='0' && c<='9')||(c>='A' && c<='F')||(c>='a' && c<='f');
 }
 
-void FileLengthToString(FILE_LENGTH file_size,char *bytes)
+char* FileLengthToString(FILE_LENGTH file_size)
 {
-	  std::stringstream a;
-      a << file_size;
-	  const char* size = a.str().c_str();
-      strcpy_s(bytes,strlen(size) + 1,size);
+	std::stringstream a;
+    a << file_size;
+	int length = a.str().length() + 1;
+	char* bytes = new char[length];
+	std::string s = a.str();
+	const char* size = s.c_str();
+    strcpy_s(bytes,length,size);
+	return bytes;
 }
 
 FILE_LENGTH StringToFileLength(char *bytes)
