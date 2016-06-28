@@ -15,11 +15,13 @@
 #include <Windows.h>
 #include <string>
 #include <algorithm>
+#include <Iphlpapi.h>
 
 #include "strutil.h"
 #include "DownloadInfo.h"
 #include "json\json.h"
 #include "sysutil.h"
+#include "Ping.h"
 
 
 

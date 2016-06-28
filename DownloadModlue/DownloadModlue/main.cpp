@@ -175,7 +175,18 @@ int GetDownloadInfo(DownloadInfo *downlaodInfo,char *url)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	if(argc == 3){
+	sockaddr_in addr4;
+	UINT ip = inet_pton(AF_INET,"115.239.211.112",&addr4.sin_addr);
+	ULONG hopCount = 0;
+	ULONG RTT = 0;
+
+	if (GetRTTAndHopCount(ip, &hopCount, 30, &RTT) == TRUE) {
+		printf("Hops: %ld\n", hopCount);
+		printf("RTT: %ld\n", RTT);
+	}else {
+		printf("Error: %ld\n", GetLastError());
+	}
+	/*if(argc == 3){
 		TCHAR * inUrl = argv[1];
 		TCHAR* filepath = argv[2];
 		TCHAR *doc_id = GetDocId(inUrl);
@@ -210,5 +221,5 @@ int _tmain(int argc, _TCHAR* argv[])
 	if(downloadInfo)
 		delete downloadInfo;
 	}
-	return 0;
+	return 0;*/
 }
