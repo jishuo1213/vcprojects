@@ -11,6 +11,12 @@ TCHAR* GetDocId(TCHAR * url);
 
 std::string BuildProgressResponseJson(FILE_LENGTH speed,FILE_LENGTH downloaded_size,FILE_LENGTH total_size,double time);
 
-void FileLengthToString(FILE_LENGTH file_size,char *bytes);
+char * FileLengthToString(FILE_LENGTH file_size);
 
 FILE_LENGTH StringToFileLength(char *bytes);
+
+std::string BuildSuccessResponseJson();
+
+std::string BuildFailedResponseJson();
+
+std::string BuildRenameFailedJson();

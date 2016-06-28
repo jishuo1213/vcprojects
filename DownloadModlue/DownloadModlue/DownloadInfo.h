@@ -19,6 +19,7 @@ public:
 		file_size = 0;
 		last_run_time = 0;
 		downloaded_size = 0;
+		temp_file_path = NULL;
 		init_temp_file_name(filepath,docId);
 		is_break_point_download = false;
 	}
@@ -30,6 +31,7 @@ public:
 		file_size = 0;
 		last_run_time = 0;
 		downloaded_size = 0;
+		temp_file_path = NULL;
 		init_temp_file_name(filepath,docid);
 		is_break_point_download = false;
 	}

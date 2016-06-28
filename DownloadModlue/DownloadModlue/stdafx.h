@@ -19,6 +19,7 @@
 #include "strutil.h"
 #include "DownloadInfo.h"
 #include "json\json.h"
+#include "sysutil.h"
 
 
 
