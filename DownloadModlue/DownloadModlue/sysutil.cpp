@@ -2,12 +2,8 @@
 
 bool IsNetWorkWell()
 {
-	if(system("ping 10.110.9.197 "))//1>nul 2>nul
-	{
-		std::cout <<"ping success "<<std::endl;
+	if(InternetCheckConnection(_T("http://hr.inspur.com/"),FLAG_ICC_FORCE_CONNECTION,0)){
 		return true;
-	}else{
-
-		return false;	
 	}
+	return false;
 }

@@ -1,14 +1,18 @@
 #include "stdafx.h"
 
-#pragma comment(lib, "ws2_32.lib")
 
 bool CPing::Ping(LPCSTR pstrHost, UINT nRetries)
 {
 	//创建一个Raw套节字
+	WSADATA wsaData;
+	if(WSAStartup(MAKEWORD(2,2),&wsaData) != 0)
+		return false;
 	SOCKET rawSocket = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 	if (rawSocket == INVALID_SOCKET)
 	{
 		int err = WSAGetLastError();
+		std::cout << "INVALID_SOCKET"<<err<<std::endl;
+		WSACleanup();
 		return false;
 	}
 	int nNetTimeout = 1000;//1秒
@@ -21,6 +25,7 @@ bool CPing::Ping(LPCSTR pstrHost, UINT nRetries)
 	LPHOSTENT lpHost = gethostbyname(pstrHost);
 	if (lpHost == NULL)
 	{
+		WSACleanup();
 		return false;
 	}
 
@@ -70,9 +75,10 @@ bool CPing::Ping(LPCSTR pstrHost, UINT nRetries)
 		m_Result.nElapseTime = nTotalTime / nRetries;
 		m_Result.cTTL = cTTL;
 		m_Result.fMissPack = (float)(nRetries - nRecvNum) / nRetries;
+		WSACleanup();
 		return true;
 	}
-
+	WSACleanup();
 	return false;
 }
 

@@ -10,11 +10,12 @@ class DownloadInfo
 {
 public:
 	DownloadInfo(CURL *curl,char *download_url,TCHAR *filepath,TCHAR *docId):
-		current_curl(curl),url(download_url),file_path(filepath),doc_id(docId)
+		current_curl(curl),url(download_url),doc_id(docId)
 	{
-		/*file_path = new TCHAR[_tcslen(filepath) + 1];
+		file_path = new TCHAR[_tcslen(filepath) + 1];
 		ZeroMemory(file_path,_tcslen(filepath) + 1);
-		_tcscpy_s(file_path,_tcslen(filepath) + 1,filepath);*/
+		_tcscpy_s(file_path,_tcslen(filepath) + 1,filepath);
+
 		file_name = NULL;
 		file_size = 0;
 		last_run_time = 0;
@@ -24,8 +25,12 @@ public:
 		is_break_point_download = false;
 	}
 
-	DownloadInfo(char *download_url,TCHAR *filepath,TCHAR *docid):url(download_url),file_path(filepath),doc_id(docid)
+	DownloadInfo(char *download_url,TCHAR *filepath,TCHAR *docid):url(download_url),doc_id(docid)
 	{
+		file_path = new TCHAR[_tcslen(filepath) + 1];
+		ZeroMemory(file_path,_tcslen(filepath) + 1);
+		_tcscpy_s(file_path,_tcslen(filepath) + 1,filepath);
+
 		current_curl = NULL;
 		file_name = NULL;
 		file_size = 0;
@@ -53,8 +58,15 @@ public:
 	void SetFileName(const TCHAR *filename)
 	{
 		this->file_name = filename;
-		TCHAR *fix = _T(".htdownload");
-		_tcscat_s(file_path,_tcsclen(file_path)+_tcsclen(file_name)+1,file_name);
+		//TCHAR* temp_temp_file_path = file_path;
+		int temp_length = _tcslen(file_path);
+		int length = temp_length + _tcsclen(file_name)+ 1;
+		TCHAR* temp_temp_file_path = new TCHAR[length];
+		ZeroMemory(temp_temp_file_path,length);
+		_tcscpy_s(temp_temp_file_path,temp_length + 1,file_path);
+		_tcscat_s(temp_temp_file_path,length,file_name);
+		delete[] file_path;
+		file_path = temp_temp_file_path;
 		//temp_file_path = new TCHAR[_tcsclen(file_path)+_tcsclen(fix)+_tcsclen(doc_id)+1];
 		//_tcscpy_s(temp_file_path,_tcsclen(file_path)+1,file_path);
 		//_tcscat_s(temp_file_path,_tcsclen(temp_file_path)+_tcsclen(doc_id)+1,doc_id);

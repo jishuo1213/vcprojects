@@ -74,7 +74,6 @@ int DownloadInfo::RenameFileAfterDownload()
 		}
 	}
 	if(moveres = MoveFile(temp_file_path,file_path)){
-		std::wcout << L"rename success"<<file_path<<std::endl;
 		return 0;
 	} else {
 		return 1;
@@ -85,9 +84,10 @@ DownloadInfo::~DownloadInfo(void)
 {
 	if(file_name)
 		delete [] file_name;
-	_tprintf(_T("%s \n"),temp_file_path);
 	if(temp_file_path)
 		delete [] temp_file_path;
 	if(doc_id)
 		delete [] doc_id;
+	if(file_path)
+		delete [] file_path;
 }

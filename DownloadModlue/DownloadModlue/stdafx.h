@@ -15,7 +15,7 @@
 #include <Windows.h>
 #include <string>
 #include <algorithm>
-#include <Iphlpapi.h>
+#include <WinInet.h>
 
 #include "strutil.h"
 #include "DownloadInfo.h"

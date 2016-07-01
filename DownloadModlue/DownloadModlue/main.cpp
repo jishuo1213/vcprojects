@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-const int RECEIVE_NO_DATA_TIME_OUT = 8;
+const int RECEIVE_NO_DATA_TIME_OUT = 7;
 static FILE *fp = NULL;
 static int receive_no_data_times = 0;
 int time_out_times = 0;
@@ -15,6 +15,7 @@ static size_t write_callback(void *ptr,size_t size,size_t nmemb,void *stream)
 	if(!fp)
 	{
 		TCHAR* filePath = downloadinfo->get_temp_file_path();
+		//TCHAR* filePath = _T("D:\\go1.6.windows-amd64.msi");
 		if(_taccess(filePath,0) == -1){
 			 _tfopen_s(&fp,filePath,_T("wb"));	
 		}else{
@@ -41,7 +42,6 @@ static size_t header_callback(void *ptr,size_t size,size_t rmemb,void *stream)
 		WCHAR* fileName = UrlDecode(urlcode_filename);
 		delete [] urlcode_filename;
 		downloadInfo->SetFileName(fileName);
-
 	}else if(strstr(str,"Content-Length")){
 		int length = strlen(str) - 15;
 		char *filesize = new char[length];
@@ -76,9 +76,7 @@ static int xferinfo(void *p,curl_off_t dltotal,curl_off_t dlnow,curl_off_t ultot
 		if(speed == 0){
 			receive_no_data_times++;
 				if(receive_no_data_times >RECEIVE_NO_DATA_TIME_OUT){
-					printf("receive_no_data_times %d \n",receive_no_data_times);
 					if(!IsNetWorkWell()){ //网络不通
-						printf("net not well  \n");
 						time_out_times++;
 						if(time_out_times > 2){//联系两个周期没有接受到数据
 							return 1; //退出
@@ -86,7 +84,6 @@ static int xferinfo(void *p,curl_off_t dltotal,curl_off_t dlnow,curl_off_t ultot
 							receive_no_data_times = 0;//在尝试一次
 						}
 					} else {//网络连通 但是连续多次没接受到数据
-						printf("net is well need reload  \n");
 						is_need_reload = true;
 						return 1;
 					}
@@ -104,11 +101,13 @@ int DownLoad(char *url,DownloadInfo *downloadInfo)
 {
 	CURL *curl;
 	CURLcode res;
-	curl = curl_easy_init();;
+	curl = curl_easy_init();
+	char* get_url;
 	if(curl)
 	{
 		downloadInfo->SetCurl(curl);
 		struct curl_slist *chunk = NULL;
+		int src_url_length = strlen(url);
 		if(downloadInfo->check_is_tempfile_exits()){
 			char *bytes = NULL;
 			bytes = FileLengthToString(downloadInfo->GetDownloadedSize());
@@ -119,10 +118,15 @@ int DownLoad(char *url,DownloadInfo *downloadInfo)
 			chunk=curl_slist_append(chunk,header);
 			delete[] bytes;
 			curl_easy_setopt(curl,CURLOPT_HTTPHEADER,chunk);
-			strcat_s(url,strlen(url)+17,"&resume_flg=true");
+			get_url = new char[src_url_length+17];
+			strcpy_s(get_url,src_url_length + 1,url);
+			strcat_s(get_url,src_url_length+17,"&resume_flg=true");
+		} else {
+			get_url = new char[src_url_length + 1];
+			strcpy_s(get_url,src_url_length + 1,url);
 		}
 
-		curl_easy_setopt(curl,CURLOPT_URL,url);
+		curl_easy_setopt(curl,CURLOPT_URL,get_url);
 		curl_easy_setopt(curl,CURLOPT_WRITEFUNCTION,	write_callback);
 		curl_easy_setopt(curl,CURLOPT_WRITEDATA,downloadInfo);
 		curl_easy_setopt(curl,CURLOPT_HEADERDATA,downloadInfo);
@@ -139,11 +143,13 @@ int DownLoad(char *url,DownloadInfo *downloadInfo)
 			curl_easy_cleanup(curl);
 			if(chunk)
 				curl_slist_free_all(chunk);
+			delete get_url;
 			return 1;
 		}
 		curl_easy_cleanup(curl);
 		if(chunk)
 			curl_slist_free_all(chunk);
+		delete get_url;
 		return 0;
 	}
 	return 0;
@@ -175,18 +181,7 @@ int GetDownloadInfo(DownloadInfo *downlaodInfo,char *url)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	sockaddr_in addr4;
-	UINT ip = inet_pton(AF_INET,"115.239.211.112",&addr4.sin_addr);
-	ULONG hopCount = 0;
-	ULONG RTT = 0;
-
-	if (GetRTTAndHopCount(ip, &hopCount, 30, &RTT) == TRUE) {
-		printf("Hops: %ld\n", hopCount);
-		printf("RTT: %ld\n", RTT);
-	}else {
-		printf("Error: %ld\n", GetLastError());
-	}
-	/*if(argc == 3){
+	if(argc == 3){
 		TCHAR * inUrl = argv[1];
 		TCHAR* filepath = argv[2];
 		TCHAR *doc_id = GetDocId(inUrl);
@@ -208,6 +203,11 @@ int _tmain(int argc, _TCHAR* argv[])
 		} else {
 			if(is_need_reload){
 				delete downloadInfo;
+				if(fp)	{
+					fclose(fp);
+					fp=NULL;
+				}
+				doc_id = GetDocId(inUrl);
 				downloadInfo = new DownloadInfo(url,filepath,doc_id);
 				receive_no_data_times = 0;
 				is_need_reload = false;
@@ -221,5 +221,5 @@ int _tmain(int argc, _TCHAR* argv[])
 	if(downloadInfo)
 		delete downloadInfo;
 	}
-	return 0;*/
+	return 0;
 }

@@ -1,5 +1,6 @@
 #include "stdafx.h"
 
+
 LPCSTR trim(const char *str);
 bool isHexNum(char c);
 
@@ -19,7 +20,7 @@ std::string BuildProgressResponseJson(FILE_LENGTH speed,FILE_LENGTH downloaded_s
 std::string BuildSuccessResponseJson()
 {
 	Json::Value info;
-	info["message"] = "下载成功";
+	info["message"] = _T("下载成功");
 	Json::Value responese;
 	responese["status_code"] = 0;
 	responese["info"] = info;
@@ -29,7 +30,7 @@ std::string BuildSuccessResponseJson()
 std::string BuildRenameFailedJson()
 {
 	Json::Value info;
-	info["message"] = "下载成功,但是重命名文件失败";
+	info["message"] = _T("下载成功,但是重命名文件失败");
 	Json::Value responese;
 	responese["status_code"] = 3;
 	responese["info"] = info;
@@ -39,7 +40,7 @@ std::string BuildRenameFailedJson()
 std::string BuildFailedResponseJson()
 {
 	Json::Value info;
-	info["message"] = "下载失败，请检查网络";
+	info["message"] = _T("下载失败，请检查网络");
 	Json::Value responese;
 	responese["status_code"] = 2;
 	responese["info"] = info;
@@ -117,7 +118,9 @@ BOOL UrlEncode(const char* szSrc, char* pBuf, int cbBufLen, BOOL bUpperCase)
     return TRUE;
 }
 
-//解码后是utf-8编码
+/*
+这个函数返回的值会分配内存，注意回收
+*/
 WCHAR* UrlDecode(LPCSTR szSrc)
 {
     if(szSrc == NULL)
@@ -153,11 +156,14 @@ WCHAR* UrlDecode(LPCSTR szSrc)
 	ZeroMemory(pUnicode,(cchWideChar+ 1) * sizeof(WCHAR));
 
 	MultiByteToWideChar(CP_UTF8,0,pUTF8,-1,pUnicode,cchWideChar);
-	free(pUTF8);
+	delete [] pUTF8;
 	delete [] trimSrc;
     return pUnicode;
 }
 
+/*
+这个函数返回的值会分配内存，注意回收
+*/
 TCHAR* GetDocId(TCHAR *url)
 {
 	int length = _tcslen(url);
@@ -174,10 +180,20 @@ TCHAR* GetDocId(TCHAR *url)
 	return doc_id;
 }
 
+/*
+这个函数返回的值会分配内存，注意回收
+*/
 LPCSTR trim(const char *str)
 {
 	std::string* s = new std::string(str);
-	s->erase(std::remove_if(s->begin(),s->end(),isspace),s->end());
+    char* ch = s->end();
+    int pos = s->length()-1;
+    while(isspace(*ch){
+        pos--;
+        ch--;
+    }
+    s->erase(pos);
+	// s->erase(std::remove_if(s->begin(),s->end(),isspace),s->end());
 	LPSTR res = new CHAR[s->length() + 1];
 	strcpy_s(res,s->length() + 1,s->c_str());
 	delete s;
@@ -205,7 +221,8 @@ FILE_LENGTH StringToFileLength(char *bytes)
 {
 	std::stringstream strValue;
 	strValue << bytes;
-	FILE_LENGTH value;
+	FILE_LENGTH value = 0;
 	strValue >> value;
+
 	return value;
 }
