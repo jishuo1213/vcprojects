@@ -188,7 +188,6 @@ int _tmain(int argc, _TCHAR* argv[])
 		TCHAR *doc_id = GetDocId(inUrl);
 		char* url = WcharToChar_New(inUrl);
 		char* char_uuid = WcharToChar_New(uuid);
-		std::wcout << filepath << std::endl;
 		DownloadInfo *downloadInfo = new DownloadInfo(url,filepath,doc_id);
 		downloadInfo->SetUUid(char_uuid);
 		if (_taccess_s(filepath, 0) != 0) { //如果文件夹不存在

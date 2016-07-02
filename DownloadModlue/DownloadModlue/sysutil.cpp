@@ -38,7 +38,6 @@ bool CreateMultiplePath(LPCWSTR path)
 		} else {
 			if (_taccess_s(part_path, 0) != 0) {
 				_tcscat_s(temp, len + 4 + 1, part_path);
-				std::wcout << temp << std::endl;
 				if (CreateDirectory(temp, NULL) == 0) {
 					delete[] temp;
 					delete[] part_path;
