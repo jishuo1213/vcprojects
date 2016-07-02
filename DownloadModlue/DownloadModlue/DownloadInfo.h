@@ -10,12 +10,11 @@ class DownloadInfo
 {
 public:
 	DownloadInfo(CURL *curl,char *download_url,TCHAR *filepath,TCHAR *docId):
-		current_curl(curl),url(download_url),doc_id(docId)
+		current_curl(curl),doc_id(docId)
 	{
 		file_path = new TCHAR[_tcslen(filepath) + 1];
 		ZeroMemory(file_path,_tcslen(filepath) + 1);
 		_tcscpy_s(file_path,_tcslen(filepath) + 1,filepath);
-
 		file_name = NULL;
 		file_size = 0;
 		last_run_time = 0;
@@ -25,7 +24,7 @@ public:
 		is_break_point_download = false;
 	}
 
-	DownloadInfo(char *download_url,TCHAR *filepath,TCHAR *docid):url(download_url),doc_id(docid)
+	DownloadInfo(char *download_url,TCHAR *filepath,TCHAR *docid):doc_id(docid)
 	{
 		file_path = new TCHAR[_tcslen(filepath) + 1];
 		ZeroMemory(file_path,_tcslen(filepath) + 1);
@@ -44,7 +43,7 @@ public:
 	DownloadInfo()
 	{
 		current_curl = NULL;
-		url = NULL;
+		//url = NULL;
 		file_path = NULL;
 		file_name = NULL;
 		temp_file_path = NULL;
@@ -114,6 +113,16 @@ public:
 		 return temp_file_path;
 	}
 
+	LPCSTR GetUUid()
+	{
+		return uuid;
+	}
+
+	void SetUUid(LPCSTR uuid)
+	{
+		this->uuid = uuid;
+	}
+
 	bool IsBreakPointDownload()
 	{
 		return is_break_point_download;
@@ -133,10 +142,11 @@ public:
 
 private:
 	CURL *current_curl;
-	char *url;
+	//char *url;
 	TCHAR *file_path;
 	TCHAR *temp_file_path;
 	TCHAR *doc_id;
+	LPCSTR uuid;
 	const TCHAR *file_name;
 	FILE_LENGTH file_size;
 	FILE_LENGTH downloaded_size;

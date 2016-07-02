@@ -90,4 +90,6 @@ DownloadInfo::~DownloadInfo(void)
 		delete [] doc_id;
 	if(file_path)
 		delete [] file_path;
+	//if (url)
+	//	delete[] url;
 }

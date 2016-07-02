@@ -4,7 +4,7 @@
 LPCSTR trim(const char *str);
 bool isHexNum(char c);
 
-std::string BuildProgressResponseJson(FILE_LENGTH speed,FILE_LENGTH downloaded_size,FILE_LENGTH total_size,double time)
+std::string BuildProgressResponseJson(DownloadInfo *downloadInfo,FILE_LENGTH speed, FILE_LENGTH downloaded_size, FILE_LENGTH total_size, double time)
 {
 	Json::Value info;
 	info["speed"] = speed;
@@ -13,37 +13,60 @@ std::string BuildProgressResponseJson(FILE_LENGTH speed,FILE_LENGTH downloaded_s
 	info["duration"] = time;
 	Json::Value responese;
 	responese["status_code"] = 1;
+	responese["uuid"] = downloadInfo->GetUUid();
 	responese["info"] = info;
 	return responese.toStyledString();
 }
 
-std::string BuildSuccessResponseJson()
+std::string BuildSuccessResponseJson(DownloadInfo *downloadInfo)
 {
 	Json::Value info;
-	info["message"] = _T("下载成功");
+	char* message = WcharToUTF8_New(_T("下载成功"));
+	info["message"] = message;
 	Json::Value responese;
 	responese["status_code"] = 0;
+	responese["uuid"] = downloadInfo->GetUUid();
 	responese["info"] = info;
+	delete[] message;
 	return responese.toStyledString();
 }
 
-std::string BuildRenameFailedJson()
+std::string BuildRenameFailedJson(DownloadInfo *downloadInfo)
 {
 	Json::Value info;
-	info["message"] = _T("下载成功,但是重命名文件失败");
+	char* message = WcharToUTF8_New(_T("下载成功,但是重命名文件失败"));
+	info["message"] = message;
 	Json::Value responese;
 	responese["status_code"] = 3;
 	responese["info"] = info;
+	responese["uuid"] = downloadInfo->GetUUid();
+	delete[] message;
 	return responese.toStyledString();
 }
 
-std::string BuildFailedResponseJson()
+std::string BuildFailedResponseJson(DownloadInfo *downloadInfo)
 {
 	Json::Value info;
-	info["message"] = _T("下载失败，请检查网络");
+	char* message = WcharToUTF8_New(_T("下载失败，请检查网络"));
+	info["message"] = message;
 	Json::Value responese;
 	responese["status_code"] = 2;
 	responese["info"] = info;
+	responese["uuid"] = downloadInfo->GetUUid();
+	delete[] message;
+	return responese.toStyledString();
+}
+
+std::string BuildFailedResponseJson(DownloadInfo * downloadInfo, int code,LPCWSTR msg)
+{
+	Json::Value info;
+	char* message = WcharToUTF8_New(msg);
+	info["message"] = message;
+	Json::Value responese;
+	responese["status_code"] = code;
+	responese["info"] = info;
+	responese["uuid"] = downloadInfo->GetUUid();
+	delete[] message;
 	return responese.toStyledString();
 }
 
@@ -186,11 +209,11 @@ TCHAR* GetDocId(TCHAR *url)
 LPCSTR trim(const char *str)
 {
 	std::string* s = new std::string(str);
-    char* ch = s->end();
+    auto ch = s->cend() - 1;
     int pos = s->length()-1;
-    while(isspace(*ch){
-        pos--;
-        ch--;
+    while(isspace(*ch)) {
+        --pos;
+        --ch;
     }
     s->erase(pos);
 	// s->erase(std::remove_if(s->begin(),s->end(),isspace),s->end());
@@ -225,4 +248,21 @@ FILE_LENGTH StringToFileLength(char *bytes)
 	strValue >> value;
 
 	return value;
+}
+
+char* WcharToUTF8_New(LPCWSTR str)
+{
+	int len = WideCharToMultiByte(CP_UTF8, 0, str, -1, NULL, 0, NULL, NULL);
+	char* dest = new char[len + 1];
+	ZeroMemory(dest, len + 1);
+	WideCharToMultiByte(CP_UTF8, 0, str, -1, dest, len, NULL, NULL);
+	return dest;
+}
+
+char* WcharToChar_New(LPCWSTR str)
+{
+	int  iLength = WideCharToMultiByte(CP_ACP, 0, str, -1, NULL, 0, NULL, NULL);
+	char *url = new char[iLength + 1];
+	WideCharToMultiByte(CP_ACP, 0, str, -1, url, iLength, NULL, NULL);
+	return url;
 }

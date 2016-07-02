@@ -91,7 +91,7 @@ static int xferinfo(void *p,curl_off_t dltotal,curl_off_t dlnow,curl_off_t ultot
 			} else {
 				receive_no_data_times = 0;
 			}
-		std::cout <<BuildProgressResponseJson(speed,myp->GetDownloadedSize(),myp->GetFileSize(),curtime)<<std::endl;
+		std::cout <<BuildProgressResponseJson(myp,speed,myp->GetDownloadedSize(),myp->GetFileSize(),curtime)<<std::endl;
 		//fprintf(stdout, BuildProgressResponseJson(speed,dlnow,myp->GetFileSize(),curtime));
 	}
 	return 0;
@@ -181,45 +181,61 @@ int GetDownloadInfo(DownloadInfo *downlaodInfo,char *url)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	if(argc == 3){
+	if(argc == 4){
 		TCHAR * inUrl = argv[1];
 		TCHAR* filepath = argv[2];
+		TCHAR* uuid = argv[3];
 		TCHAR *doc_id = GetDocId(inUrl);
-		int  iLength = WideCharToMultiByte(CP_ACP, 0, inUrl, -1, NULL, 0, NULL, NULL);
-		char *url = new char[iLength];
-		WideCharToMultiByte(CP_ACP, 0, inUrl, -1, url, iLength, NULL, NULL);   
+		char* url = WcharToChar_New(inUrl);
+		char* char_uuid = WcharToChar_New(uuid);
+		std::wcout << filepath << std::endl;
 		DownloadInfo *downloadInfo = new DownloadInfo(url,filepath,doc_id);
+		downloadInfo->SetUUid(char_uuid);
+		if (_taccess_s(filepath, 0) != 0) { //如果文件夹不存在
+			int res = CreateMultiplePath(filepath);
+			if (res == 0) {
+				fprintf(stdout,"%s\n",BuildFailedResponseJson(downloadInfo,4,_T("文件夹路径不存在，而且创建失败")).c_str());
+				delete[] url;
+				delete[] char_uuid;
+				return 0;
+			}
+		}
 		while(1){
 		if(DownLoad(url,downloadInfo)) {
 			if(fp)
 				fclose(fp);
 			if(downloadInfo->RenameFileAfterDownload() == 0) {
-				fprintf(stdout, "%s\n",BuildSuccessResponseJson().c_str());
+				fprintf(stdout, "%s\n",BuildSuccessResponseJson(downloadInfo).c_str());
 				break;
 			} else {
-				fprintf(stdout, "%s\n",BuildRenameFailedJson().c_str());
+				fprintf(stdout, "%s\n",BuildRenameFailedJson(downloadInfo).c_str());
 				break;
 			}
 		} else {
 			if(is_need_reload){
 				delete downloadInfo;
-				if(fp)	{
+				if(fp){
 					fclose(fp);
 					fp=NULL;
 				}
 				doc_id = GetDocId(inUrl);
 				downloadInfo = new DownloadInfo(url,filepath,doc_id);
+				downloadInfo->SetUUid(char_uuid);
 				receive_no_data_times = 0;
 				is_need_reload = false;
 				time_out_times = 0;
 			} else {
-				fprintf(stdout, "%s\n",BuildFailedResponseJson().c_str());
+				fprintf(stdout, "%s\n",BuildFailedResponseJson(downloadInfo).c_str());
 				break;
 			}
 		}
 	}
 	if(downloadInfo)
 		delete downloadInfo;
+	if(url)
+		delete[] url;
+	if (char_uuid)
+		delete[] char_uuid;
 	}
 	return 0;
 }

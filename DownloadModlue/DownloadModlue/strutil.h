@@ -9,14 +9,20 @@ WCHAR* UrlDecode(LPCSTR szSrc);
 
 TCHAR* GetDocId(TCHAR * url);
 
-std::string BuildProgressResponseJson(FILE_LENGTH speed,FILE_LENGTH downloaded_size,FILE_LENGTH total_size,double time);
+std::string BuildProgressResponseJson(DownloadInfo *downloadInfo,FILE_LENGTH speed,FILE_LENGTH downloaded_size,FILE_LENGTH total_size,double time);
 
 char * FileLengthToString(FILE_LENGTH file_size);
 
 FILE_LENGTH StringToFileLength(char *bytes);
 
-std::string BuildSuccessResponseJson();
+std::string BuildSuccessResponseJson(DownloadInfo *downloadInfo);
 
-std::string BuildFailedResponseJson();
+std::string BuildFailedResponseJson(DownloadInfo *downloadInfo);
 
-std::string BuildRenameFailedJson();
+std::string BuildFailedResponseJson(DownloadInfo *downloadInfo,int code,LPCWSTR msg);
+
+std::string BuildRenameFailedJson(DownloadInfo *downloadInfo);
+
+char* WcharToUTF8_New(LPCWSTR str);
+
+char* WcharToChar_New(LPCWSTR str);
