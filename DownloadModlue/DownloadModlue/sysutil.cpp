@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-bool IsNetWorkWell()
+bool CheckNetWorkWell()
 {
 	if(InternetCheckConnection(_T("http://hr.inspur.com/"),FLAG_ICC_FORCE_CONNECTION,0)){
 		return true;

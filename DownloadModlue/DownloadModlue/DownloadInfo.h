@@ -4,7 +4,7 @@
 
 const float MINIMAL_PROGRESS_FUNCTIONALITY_INTERVAL = 1.0;
 
-typedef unsigned long long FILE_LENGTH;
+typedef long long FILE_LENGTH;
 
 class DownloadInfo
 {
@@ -138,6 +138,11 @@ public:
 		return current_curl;
 	}
 
+	const TCHAR* GetFileName() 
+	{
+		return file_name;
+	}
+
 	~DownloadInfo(void);
 
 private:
@@ -155,5 +160,8 @@ private:
 
 
 	void init_temp_file_name(TCHAR *filepath,TCHAR *docid);
+
+public:
+	int downloadType;
 };
 

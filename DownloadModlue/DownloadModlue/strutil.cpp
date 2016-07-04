@@ -1,4 +1,9 @@
 #include "stdafx.h"
+#include <stdarg.h>
+#include <ctime>
+
+
+static FILE* logfile;
 
 
 LPCSTR trim(const char *str);
@@ -149,7 +154,6 @@ WCHAR* UrlDecode(LPCSTR szSrc)
     if(szSrc == NULL)
         return FALSE;
 	LPCSTR trimSrc = trim(szSrc);
-
     size_t len_ascii = strlen(trimSrc);
     if(len_ascii == 0)
     {
@@ -160,18 +164,43 @@ WCHAR* UrlDecode(LPCSTR szSrc)
     if(pUTF8 == NULL)
         return NULL;
 
-    int cbDest = 0; //累加
     LPSTR pDest = pUTF8;
 	LPCSTR pSrc = trimSrc;
 	size_t i = 0;
-	while (i < len_ascii)
+	while (*pSrc)
 	{
-		if(i <= (len_ascii - 3) && pSrc[i] == '%' && isHexNum(pSrc[i+1]) && isHexNum(pSrc[i+2])){
-			sscanf_s(pSrc+i+1,"%x",pDest++);
-			i+=3;
-		}else{
-			*(pDest++)=pSrc[i++];
+		if (*pSrc == '%')
+		{
+			*pDest = 0;
+			//高位
+			if (pSrc[1] >= 'A' && pSrc[1] <= 'F')
+				*pDest += (pSrc[1] - 'A' + 10) * 0x10;
+			else if (pSrc[1] >= 'a' && pSrc[1] <= 'f')
+				*pDest += (pSrc[1] - 'a' + 10) * 0x10;
+			else
+				*pDest += (pSrc[1] - '0') * 0x10;
+
+			//低位
+			if (pSrc[2] >= 'A' && pSrc[2] <= 'F')
+				*pDest += (pSrc[2] - 'A' + 10);
+			else if (pSrc[2] >= 'a' && pSrc[2] <= 'f')
+				*pDest += (pSrc[2] - 'a' + 10);
+			else
+				*pDest += (pSrc[2] - '0');
+
+			pSrc += 3;
 		}
+		else if (*pSrc == '+')
+		{
+			*pDest = ' ';
+			++pSrc;
+		}
+		else
+		{
+			*pDest = *pSrc;
+			++pSrc;
+		}
+		++pDest;
 	}
 
     int cchWideChar = MultiByteToWideChar(CP_UTF8, 0, pUTF8, -1, NULL, 0);
@@ -184,23 +213,35 @@ WCHAR* UrlDecode(LPCSTR szSrc)
     return pUnicode;
 }
 
+TCHAR* parse_url(TCHAR *start,TCHAR *end,int prefix_length) 
+{
+	int length = end - start - prefix_length;
+	TCHAR *files_id = new TCHAR[length + 1];
+	ZeroMemory(files_id, length + 1);
+	_tcsnccpy_s(files_id, length + 1, start + prefix_length, length);
+	return files_id;
+}
+
 /*
 这个函数返回的值会分配内存，注意回收
 */
-TCHAR* GetDocId(TCHAR *url)
+TCHAR* GetDocId(char *url)
 {
-	int length = _tcslen(url);
-	TCHAR *src_url = new TCHAR[length + 1];
-	ZeroMemory(src_url,length + 1);
-	_tcscpy_s(src_url,length + 1,url);
-	TCHAR *doc_start =_tcsstr(src_url,_T("doc_id="));
-	TCHAR *doc_end = _tcsstr(src_url,_T("&"));
-	int docid_length = doc_end - doc_start - 7;
-	TCHAR *doc_id = new TCHAR[docid_length + 1];
-	ZeroMemory(doc_id,docid_length + 1);
-	_tcsnccpy_s(doc_id,docid_length + 1,doc_start + 7,docid_length);
-	delete [] src_url;
-	return doc_id;
+	std::string url_md5 = md5((std::string(url)));
+	return CharToWchar_New(url_md5.c_str());
+}
+
+int GetDownloadType(char *url) {
+	if (strstr(url, "doc_id=") != NULL) {//普通下载
+		return 0;
+	} else if (strstr(url, ("fileids=")) != NULL &&  strstr(url, ("folderids=")) != NULL) {//批量下载
+		return 1;
+	} else if (strstr(url, ("folderids=")) != NULL) {
+		return 2;
+	} else {
+		Log(_T("%s"), _T("url错误,没有找到docid folderid fileid"));
+		return -1;
+	}
 }
 
 /*
@@ -215,7 +256,7 @@ LPCSTR trim(const char *str)
         --pos;
         --ch;
     }
-    s->erase(pos);
+    s->erase(pos + 1);
 	// s->erase(std::remove_if(s->begin(),s->end(),isspace),s->end());
 	LPSTR res = new CHAR[s->length() + 1];
 	strcpy_s(res,s->length() + 1,s->c_str());
@@ -266,3 +307,51 @@ char* WcharToChar_New(LPCWSTR str)
 	WideCharToMultiByte(CP_ACP, 0, str, -1, url, iLength, NULL, NULL);
 	return url;
 }
+
+WCHAR* CharToWchar_New(const char *str) 
+{
+	int nLen = MultiByteToWideChar(CP_ACP, 0, str, -1, NULL, 0);
+	if (nLen == 0) {
+		return NULL;
+	}
+	wchar_t* pResult = new wchar_t[nLen + 1];
+	MultiByteToWideChar(CP_ACP, 0, str, -1, pResult, nLen);
+	return pResult;
+}
+
+
+
+void Log(const TCHAR *format, ...)
+{
+	if (true) {
+		if (logfile == NULL) {
+			TCHAR buffer[MAX_PATH];
+			_tgetcwd(buffer, MAX_PATH);
+			_tcscat_s(buffer, MAX_PATH, _T("\\download.log"));
+			_tfopen_s(&logfile,buffer,_T("a,ccs=UTF-8"));
+		}
+		time_t now_time;
+		now_time = time(NULL);
+		struct tm now;
+		localtime_s(&now,&now_time);
+		//strftime(s, sizeof(s), "%Y-%m-%d %H:%M:%S", &tm);
+		char buf[30];
+		ZeroMemory(buf, 30);
+		strftime(buf, 30, "%Y-%m-%d %H:%M:%S", &now);
+		WCHAR *w_buf = CharToWchar_New(buf);
+		_ftprintf(logfile, _T("%s:"),w_buf);
+		delete[] w_buf;
+		va_list args;
+		va_start(args, format);
+		_vfwprintf_l(logfile, format,NULL,args);
+		va_end(args);
+		_ftprintf(logfile, _T("\n"));
+	}
+}
+
+void CloseLog()
+{
+	if (logfile)
+		fclose(logfile);
+}
+

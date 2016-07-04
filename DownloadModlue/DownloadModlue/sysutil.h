@@ -1,5 +1,5 @@
 #pragma once
 
-bool IsNetWorkWell();
+bool CheckNetWorkWell();
 
 bool CreateMultiplePath(LPCWSTR path);

@@ -90,6 +90,7 @@
     <ClInclude Include="DownloadInfo.h" />
     <ClInclude Include="json\json-forwards.h" />
     <ClInclude Include="json\json.h" />
+    <ClInclude Include="md5.h" />
     <ClInclude Include="Ping.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="sysutil.h" />
@@ -100,6 +101,7 @@
     <ClCompile Include="DownloadInfo.cpp" />
     <ClCompile Include="jsoncpp.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="md5.cpp" />
     <ClCompile Include="Ping.cpp" />
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>

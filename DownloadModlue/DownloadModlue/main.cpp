@@ -32,17 +32,16 @@ static size_t header_callback(void *ptr,size_t size,size_t rmemb,void *stream)
 {
 	DownloadInfo *downloadInfo = (DownloadInfo*)stream;
 	char *str = (char*)ptr;
-	if(strstr(str,"Content-Disposition")){
+	if(!downloadInfo->GetFileName() && strstr(str,"Content-Disposition")) {
 		char *src = strstr(str,"filename=");
 		int length = strlen(src) - 8;
 		char *urlcode_filename = new char[length];
 		ZeroMemory(urlcode_filename,length);
-
 		strcpy_s(urlcode_filename,length,(src + 9));
 		WCHAR* fileName = UrlDecode(urlcode_filename);
 		delete [] urlcode_filename;
 		downloadInfo->SetFileName(fileName);
-	}else if(strstr(str,"Content-Length")){
+	}else if(strstr(str,"Content-Length")) {
 		int length = strlen(str) - 15;
 		char *filesize = new char[length];
 		strcpy_s(filesize,length,str+16);
@@ -57,9 +56,16 @@ static int xferinfo(void *p,curl_off_t dltotal,curl_off_t dlnow,curl_off_t ultot
 {
 	DownloadInfo *myp = (DownloadInfo *)p;
 	double curtime = 0;
-	if((myp->GetFileSize()) <=0)
-		return 0;
 	curtime = myp->get_cur_run_time();
+	if (myp->GetDownloadedSize() == 0) {
+		//if (myp->check_progress_time(curtime)) {
+
+		//	std::cout << BuildProgressResponseJson(myp, speed, myp->GetDownloadedSize(), myp->GetFileSize(), curtime) << std::endl;
+		//}
+		if (myp->downloadType == 0) {
+			return 0;
+		}
+	}
 	if(myp->check_progress_time(curtime)){
 		myp->SetLastRunTime(curtime);
 		FILE_LENGTH speed;
@@ -76,7 +82,7 @@ static int xferinfo(void *p,curl_off_t dltotal,curl_off_t dlnow,curl_off_t ultot
 		if(speed == 0){
 			receive_no_data_times++;
 				if(receive_no_data_times >RECEIVE_NO_DATA_TIME_OUT){
-					if(!IsNetWorkWell()){ //网络不通
+					if(!CheckNetWorkWell()){ //网络不通
 						time_out_times++;
 						if(time_out_times > 2){//联系两个周期没有接受到数据
 							return 1; //退出
@@ -137,6 +143,9 @@ int DownLoad(char *url,DownloadInfo *downloadInfo)
 		curl_easy_setopt(curl,CURLOPT_CONNECTTIMEOUT,10);//连接超时10S
 		curl_easy_setopt(curl,CURLOPT_XFERINFOFUNCTION,xferinfo);
 		curl_easy_setopt(curl,CURLOPT_XFERINFODATA,downloadInfo);
+		//curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, xferinfo);
+		///* pass the struct pointer into the progress function */
+		//curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, downloadInfo);
 		
 		res = curl_easy_perform(curl);
 		if(res == CURLE_OK) {
@@ -181,53 +190,82 @@ int GetDownloadInfo(DownloadInfo *downlaodInfo,char *url)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	if(argc == 4){
+	if (argc >= 4) {
 		TCHAR * inUrl = argv[1];
 		TCHAR* filepath = argv[2];
 		TCHAR* uuid = argv[3];
-		TCHAR *doc_id = GetDocId(inUrl);
 		char* url = WcharToChar_New(inUrl);
+		TCHAR *doc_id = GetDocId(url);
+		int downloadType = GetDownloadType(url);
 		char* char_uuid = WcharToChar_New(uuid);
 		DownloadInfo *downloadInfo = new DownloadInfo(url,filepath,doc_id);
+		downloadInfo->downloadType = downloadType;
 		downloadInfo->SetUUid(char_uuid);
 		if (_taccess_s(filepath, 0) != 0) { //如果文件夹不存在
 			int res = CreateMultiplePath(filepath);
 			if (res == 0) {
+				Log(_T("%s, %s"),_T("文件夹不存在，创建文件夹失败"),filepath);
 				fprintf(stdout,"%s\n",BuildFailedResponseJson(downloadInfo,4,_T("文件夹路径不存在，而且创建失败")).c_str());
 				delete[] url;
 				delete[] char_uuid;
+				CloseLog();
 				return 0;
 			}
 		}
-		while(1){
-		if(DownLoad(url,downloadInfo)) {
-			if(fp)
-				fclose(fp);
-			if(downloadInfo->RenameFileAfterDownload() == 0) {
-				fprintf(stdout, "%s\n",BuildSuccessResponseJson(downloadInfo).c_str());
-				break;
+
+		if (argc > 5) {
+			if (_tcscmp(argv[4],_T("/name")) == 0) {
+				int length = _tcslen(argv[5]) + 1;
+				TCHAR *file_name = new TCHAR[length];
+				_tcscpy_s(file_name, length, argv[5]);
+				downloadInfo->SetFileName(file_name);
 			} else {
-				fprintf(stdout, "%s\n",BuildRenameFailedJson(downloadInfo).c_str());
-				break;
+				Log(_T("%s"), _T("参数传递错误，应该是/name"));
+				CloseLog();
+				return 0;
 			}
-		} else {
-			if(is_need_reload){
-				delete downloadInfo;
-				if(fp){
-					fclose(fp);
-					fp=NULL;
-				}
-				doc_id = GetDocId(inUrl);
-				downloadInfo = new DownloadInfo(url,filepath,doc_id);
-				downloadInfo->SetUUid(char_uuid);
-				receive_no_data_times = 0;
-				is_need_reload = false;
-				time_out_times = 0;
-			} else {
-				fprintf(stdout, "%s\n",BuildFailedResponseJson(downloadInfo).c_str());
-				break;
-			}
+		} else if(argc == 5){
+			Log(_T("%s"),_T("参数传递少，/name 后面应该有文件名"));
+			CloseLog();
+			return 0;
 		}
+
+		while(1){
+			if(DownLoad(url,downloadInfo)) {
+				if(fp)
+					fclose(fp);
+				if(downloadInfo->RenameFileAfterDownload() == 0) {
+					fprintf(stdout, "%s\n",BuildSuccessResponseJson(downloadInfo).c_str());
+					break;
+				} else {
+					fprintf(stdout, "%s\n",BuildRenameFailedJson(downloadInfo).c_str());
+					break;
+				}
+			} else {
+				if(is_need_reload){//重新连接 下载
+					delete downloadInfo;
+					if(fp){
+						fclose(fp);
+						fp=NULL;
+					}
+					doc_id = GetDocId(url);
+					downloadInfo = new DownloadInfo(url,filepath,doc_id);
+					downloadInfo->SetUUid(char_uuid);
+					downloadInfo->downloadType = downloadType;
+					if (argc > 5) {
+						int length = _tcslen(argv[5]) + 1;
+						TCHAR *file_name = new TCHAR[length];
+						_tcscpy_s(file_name, length, argv[5]);
+						downloadInfo->SetFileName(file_name);
+					}
+					receive_no_data_times = 0;
+					is_need_reload = false;
+					time_out_times = 0;
+				} else {
+					fprintf(stdout, "%s\n",BuildFailedResponseJson(downloadInfo).c_str());
+					break;
+				}
+			}
 	}
 	if(downloadInfo)
 		delete downloadInfo;
@@ -236,5 +274,6 @@ int _tmain(int argc, _TCHAR* argv[])
 	if (char_uuid)
 		delete[] char_uuid;
 	}
+	CloseLog();
 	return 0;
 }

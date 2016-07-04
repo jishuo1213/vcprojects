@@ -7,7 +7,7 @@ BOOL UrlEncode(const char* szSrc, char* pBuf, int cbBufLen, BOOL bUpperCase);
 
 WCHAR* UrlDecode(LPCSTR szSrc);
 
-TCHAR* GetDocId(TCHAR * url);
+TCHAR* GetDocId(char * url);
 
 std::string BuildProgressResponseJson(DownloadInfo *downloadInfo,FILE_LENGTH speed,FILE_LENGTH downloaded_size,FILE_LENGTH total_size,double time);
 
@@ -26,3 +26,11 @@ std::string BuildRenameFailedJson(DownloadInfo *downloadInfo);
 char* WcharToUTF8_New(LPCWSTR str);
 
 char* WcharToChar_New(LPCWSTR str);
+
+WCHAR* CharToWchar_New(const char *str);
+
+void Log(const TCHAR *info, ...);
+
+void CloseLog();
+
+int GetDownloadType(char *url);
