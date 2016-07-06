@@ -84,13 +84,14 @@ static int xferinfo(void *p, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ul
 			if (receive_no_data_times > RECEIVE_NO_DATA_TIME_OUT) {
 				Log(_T("%s"),_T("超过10次速度为0"));
 				if (!CheckNetWorkWell()) { //网络不通
-					Log(_T("%s"), _T("测试网络，网络未联通"));
 					time_out_times++;
-					if (time_out_times > 9) {//联系两个周期没有接受到数据
-						Log(_T("%s"), _T("网络连续10个周期未联通，退出下载"));
+					Log(_T("%s time_out_times:%d"), _T("测试网络，网络未联通"),time_out_times);
+					if (time_out_times > 9) {//联系9个周期没有接受到数据
+						Log(_T("%s time_out_times:%d"), _T("网络连续10个周期未联通，退出下载"),time_out_times);
 						return 1; //退出
 					} else {
 						receive_no_data_times = 0;//在尝试一次
+						Log(_T("%s %d"), _T("在尝试一次"),receive_no_data_times);
 					}
 				} else {//网络连通 但是连续多次没接受到数据
 					Log(_T("%s"), _T("测试网络，联通,需要重新启动下载"));
@@ -159,6 +160,12 @@ int DownLoad(char *url, DownloadInfo *downloadInfo)
 				curl_slist_free_all(chunk);
 			delete get_url;
 			return 1;
+		} else {
+			TCHAR * error = CharToWchar_New(curl_easy_strerror(res));
+			Log(_T("%s"),error);
+			delete[] error;
+			if(res == CURLE_RECV_ERROR)
+				is_need_reload = true;
 		}
 		curl_easy_cleanup(curl);
 		if (chunk)
@@ -195,6 +202,16 @@ int GetDownloadInfo(DownloadInfo *downlaodInfo, char *url)
 
 int _tmain(int argc, _TCHAR* argv[])
 {
+#ifdef _DEBUG
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+	//FILE * logfile = NULL;
+	//TCHAR buffer[MAX_PATH];
+	//_tgetcwd(buffer, MAX_PATH);
+	//_tcscat_s(buffer, MAX_PATH, _T("\\download.log"));
+	//_tfopen_s(&logfile, buffer, _T("a,ccs=UTF-8"));
+#endif // _DEBUG
+
+	
 	if (argc >= 4) {
 		TCHAR * inUrl = argv[1];
 		TCHAR* filepath = argv[2];
