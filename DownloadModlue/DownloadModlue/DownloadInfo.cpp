@@ -18,12 +18,14 @@ bool DownloadInfo::check_is_tempfile_exits()
 	FILE* fp = NULL;
 	if(_taccess(temp_file_path,0) == 0){
 		_tfopen_s(&fp,temp_file_path,_T("rb"));	
-		if(fp) {
+		if(fp && downloadType == 0) {
 			downloaded_size = _filelengthi64(_fileno(fp));
 			is_break_point_download = true;
 			fclose(fp);
 			return true;
 		} else {
+			if(fp)
+				fclose(fp);
 			DeleteFile(temp_file_path);
 			is_break_point_download = false;
 		}
