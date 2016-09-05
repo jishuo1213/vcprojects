@@ -16,6 +16,9 @@
 #include <string>
 #include <algorithm>
 #include <WinInet.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 #include "strutil.h"
 #include "DownloadInfo.h"
@@ -23,10 +26,10 @@
 #include "sysutil.h"
 #include "Ping.h"
 #include "md5.h"
+#include "UploadInfo.h"
 
 #ifdef _DEBUG
 #define _CRTDBG_MAP_ALLOC
-#include <stdlib.h>
 #include <crtdbg.h>
 
 #ifndef DBG_NEW
