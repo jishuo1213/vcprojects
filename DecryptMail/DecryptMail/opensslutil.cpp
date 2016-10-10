@@ -95,9 +95,9 @@ X509 *load_cert(const char *file) {
 	if ((cert = BIO_new(BIO_s_file())) == NULL) {
 		return NULL;
 	}
-	//FILE *cert_file = NULL;
-	//open_wchar_file(file,cert_file,L"rb");
-	//cert = BIO_new_fp(cert_file, BIO_CLOSE | BIO_FP_TEXT);
+	/*FILE *cert_file = NULL;
+	open_wchar_file(file,cert_file,L"rb");
+	cert = BIO_new_fp(cert_file, BIO_CLOSE | BIO_FP_TEXT);*/
 	if (BIO_read_filename(cert, file) <= 0) {
 		return NULL;
 	}
@@ -135,9 +135,9 @@ EVP_PKEY *load_key(const char *file, const char *pass) {
 
 	printf("%s \n%s \n", file, pass);
 
-	//FILE *cert_file = NULL;
-	//open_wchar_file(file, cert_file, L"rb");
-	//key = BIO_new_fp(cert_file, BIO_CLOSE | BIO_FP_TEXT);
+	/*FILE *cert_file = NULL;
+	open_wchar_file(file, cert_file, L"rb");
+	key = BIO_new_fp(cert_file, BIO_CLOSE | BIO_FP_TEXT);*/
 	key = BIO_new(BIO_s_file());
 	if (key == NULL) {
 		return NULL;
@@ -409,7 +409,7 @@ void destroy_ui_method(void) {
 //	MultiByteToWideChar(CP_UTF8, 0, str, -1, pResult, nLen);
 //	return pResult;
 //}
-
+//
 //void open_wchar_file(const char *filePath, FILE *file,const WCHAR* mode) {
 //	WCHAR* w_path = CharToWchar_New(filePath);
 //	if (w_path) {

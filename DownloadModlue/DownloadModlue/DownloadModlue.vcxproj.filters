@@ -30,12 +30,6 @@
     <ClInclude Include="strutil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="json\json-forwards.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="json\json.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="sysutil.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -43,6 +37,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="md5.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="upload.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="UploadInfo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -69,6 +69,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="md5.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="upload.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="UploadInfo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

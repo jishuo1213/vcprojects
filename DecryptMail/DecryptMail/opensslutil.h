@@ -62,6 +62,4 @@ void destroy_ui_method(void);
 
 int dump_cert_text(BIO *out, X509 *x);
 
-//void open_wchar_file(const char *filePath, FILE *file,const WCHAR *mode);
-
 #endif //DECRYPTMAIL_OPENSSLUTIL_H

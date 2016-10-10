@@ -1,13 +1,12 @@
 #include "stdafx.h"
 #include <stdarg.h>
 #include <ctime>
+#include<algorithm>
 
 const char* MimeTypes[][2];
 
 
 //static FILE* logfile;
-
-
 LPCSTR trim(const char *str);
 bool isHexNum(char c);
 
@@ -23,13 +22,15 @@ std::string BuildProgressResponseJson(DownloadInfo *downloadInfo, FILE_LENGTH sp
 	responese["info"] = info;
 	//Log()
 	std::string res = responese.toStyledString();
-	Log("%s", res.c_str());
+	//std::remove(res.begin(), res.end(),'\n');
+	res.erase(std::remove_if(res.begin(), res.end(), isspace), res.end());
+	//Log("%s", res.c_str());
 	return res;
 }
 
 std::string BuildSuccessResponseJson(DownloadInfo *downloadInfo) {
 	Json::Value info;
-	char* message = WcharToUTF8_New(_T("下载成功"));
+	char* message = WcharToUTF8_New(_T("download success"));
 	info["message"] = message;
 	Json::Value responese;
 	responese["status_code"] = 0;
@@ -37,32 +38,41 @@ std::string BuildSuccessResponseJson(DownloadInfo *downloadInfo) {
 	responese["info"] = info;
 	delete[] message;
 	std::string res = responese.toStyledString();
-	Log("%s", res.c_str());
+	res.erase(std::remove_if(res.begin(), res.end(), isspace), res.end());
+	//Log("%s", res.c_str());
 	return res;
 }
 
+
+
 std::string BuildRenameFailedJson(DownloadInfo *downloadInfo) {
 	Json::Value info;
-	char* message = WcharToUTF8_New(_T("下载成功,但是重命名文件失败"));
+	char* message = WcharToUTF8_New(_T("rename failed"));
 	info["message"] = message;
 	Json::Value responese;
 	responese["status_code"] = 3;
 	responese["info"] = info;
 	responese["uuid"] = downloadInfo->GetUUid();
 	delete[] message;
-	return responese.toStyledString();
+	std::string res = responese.toStyledString();
+	res.erase(std::remove_if(res.begin(), res.end(), isspace), res.end());
+	//Log("%s", res.c_str());
+	return res;
 }
 
 std::string BuildFailedResponseJson(DownloadInfo *downloadInfo) {
 	Json::Value info;
-	char* message = WcharToUTF8_New(_T("下载失败，请检查网络"));
+	char* message = WcharToUTF8_New(_T("download failed net work failed"));
 	info["message"] = message;
 	Json::Value responese;
 	responese["status_code"] = 2;
 	responese["info"] = info;
 	responese["uuid"] = downloadInfo->GetUUid();
 	delete[] message;
-	return responese.toStyledString();
+	std::string res = responese.toStyledString();
+	res.erase(std::remove_if(res.begin(), res.end(), isspace), res.end());
+	//Log("%s", res.c_str());
+	return res;
 }
 
 std::string BuildFailedResponseJson(DownloadInfo * downloadInfo, int code, LPCWSTR msg) {
@@ -74,7 +84,10 @@ std::string BuildFailedResponseJson(DownloadInfo * downloadInfo, int code, LPCWS
 	responese["info"] = info;
 	responese["uuid"] = downloadInfo->GetUUid();
 	delete[] message;
-	return responese.toStyledString();
+	std::string res = responese.toStyledString();
+	res.erase(std::remove_if(res.begin(), res.end(), isspace), res.end());
+	//Log("%s", res.c_str());
+	return res;
 }
 
 BOOL UrlEncode(const char* szSrc, char* pBuf, int cbBufLen, BOOL bUpperCase) {
@@ -282,6 +295,7 @@ char* WcharToUTF8_New(LPCWSTR str) {
 char* WcharToChar_New(LPCWSTR str) {
 	int  iLength = WideCharToMultiByte(CP_ACP, 0, str, -1, NULL, 0, NULL, NULL);
 	char *url = new char[iLength + 1];
+	ZeroMemory(url, iLength + 1);
 	WideCharToMultiByte(CP_ACP, 0, str, -1, url, iLength, NULL, NULL);
 	return url;
 }
@@ -292,6 +306,7 @@ WCHAR* CharToWchar_New(const char *str) {
 		return NULL;
 	}
 	wchar_t* pResult = new wchar_t[nLen + 1];
+	ZeroMemory(pResult, nLen + 1);
 	MultiByteToWideChar(CP_ACP, 0, str, -1, pResult, nLen);
 	return pResult;
 }
@@ -415,7 +430,10 @@ std::string BuildUploadProgressResJson(UploadInfo * uploadInfo, FILE_LENGTH uplo
 	responese["status_code"] = 1;
 	responese["uuid"] = uploadInfo->GetUUid();
 	responese["info"] = info;
-	return responese.toStyledString();
+	std::string res = responese.toStyledString();
+	res.erase(std::remove_if(res.begin(), res.end(), isspace), res.end());
+	//Log("%s", res.c_str());
+	return res;
 }
 
 std::string BuildUploadFailedResJson(UploadInfo * uploadInfo, int code, LPCSTR ms) {
@@ -426,7 +444,10 @@ std::string BuildUploadFailedResJson(UploadInfo * uploadInfo, int code, LPCSTR m
 	responese["status_code"] = 2;
 	responese["uuid"] = uploadInfo->GetUUid();
 	responese["info"] = info;
-	return responese.toStyledString();
+	std::string res = responese.toStyledString();
+	res.erase(std::remove_if(res.begin(), res.end(), isspace), res.end());
+	//Log("%s", res.c_str());
+	return res;
 }
 
 std::string BuildUploadSuccessResJson(UploadInfo * uploadInfo, char * server_res) {
@@ -437,6 +458,9 @@ std::string BuildUploadSuccessResJson(UploadInfo * uploadInfo, char * server_res
 	responese["status_code"] = 0;
 	responese["uuid"] = uploadInfo->GetUUid();
 	responese["info"] = info;
-	return responese.toStyledString();
+	std::string res = responese.toStyledString();
+	res.erase(std::remove_if(res.begin(), res.end(), isspace), res.end());
+	//Log("%s", res.c_str());
+	return res;
 }
 

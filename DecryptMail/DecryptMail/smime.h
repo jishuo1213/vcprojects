@@ -17,4 +17,8 @@ void clean();
 
 int verify_mime(const char *infile, char *outfile, const char *CAfile);
 
+int decrypt_cms(const char *recipfile, const char *pass, const char *infile, const char *outfile);
+
+int parse_cert_file(const char *infile, const char *password, const char *outfile);
+
 #endif //DECRYPTMAIL_SMIME_H

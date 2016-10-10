@@ -3,11 +3,12 @@
 
 static int downloadFile(TCHAR *inUrl, TCHAR *filepath, TCHAR *uuid, TCHAR *file_name);
 
-const int RECEIVE_NO_DATA_TIME_OUT = 9;
+int RECEIVE_NO_DATA_TIME_OUT = 3;
 static FILE *fp = NULL;
 static int receive_no_data_times = 0;
 int time_out_times = 0;
 bool is_need_reload = false;
+bool is_get_header = false;
 
 static size_t write_callback(void *ptr, size_t size, size_t nmemb, void *stream) {
 	int len = size * nmemb;
@@ -15,8 +16,7 @@ static size_t write_callback(void *ptr, size_t size, size_t nmemb, void *stream)
 	DownloadInfo *downloadinfo = (DownloadInfo*)stream;
 	if (!fp) {
 		TCHAR* filePath = downloadinfo->get_temp_file_path();
-		//TCHAR* filePath = _T("D:\\go1.6.windows-amd64.msi");
-		if (_taccess(filePath, 0) == -1) {
+		if (_taccess(filePath, 0) == -1 || downloadinfo->downloadType != 0) {
 			_tfopen_s(&fp, filePath, _T("wb"));
 		} else {
 			_tfopen_s(&fp, filePath, _T("ab"));
@@ -31,6 +31,7 @@ static size_t write_callback(void *ptr, size_t size, size_t nmemb, void *stream)
 static size_t header_callback(void *ptr, size_t size, size_t rmemb, void *stream) {
 	DownloadInfo *downloadInfo = (DownloadInfo*)stream;
 	char *str = (char*)ptr;
+	is_get_header = true;
 	if (!downloadInfo->GetFileName() && strstr(str, "Content-Disposition")) {
 		char *src = strstr(str, "filename=");
 		int length = strlen(src) - 8;
@@ -48,13 +49,18 @@ static size_t header_callback(void *ptr, size_t size, size_t rmemb, void *stream
 		delete[] filesize;
 		downloadInfo->SetFileSize(size);
 	}
+
 	return rmemb * size;
 }
 
 static int xferinfo(void *p, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ultotal, curl_off_t ulnow) {
+	if (!is_get_header) {
+		return 0;
+	}
 	DownloadInfo *myp = (DownloadInfo *)p;
 	double curtime = 0;
 	curtime = myp->get_cur_run_time();
+	static FILE_LENGTH prvious_download = 0;
 	if (myp->GetFileSize() == 0) {
 		//if (myp->check_progress_time(curtime)) {
 
@@ -66,34 +72,46 @@ static int xferinfo(void *p, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ul
 	}
 	if (myp->check_progress_time(curtime)) {
 		myp->SetLastRunTime(curtime);
-		FILE_LENGTH speed;
+		FILE_LENGTH speed = 0;
 		if (myp->IsBreakPointDownload()) {
-			static FILE_LENGTH prvious_download = 0;
 			speed = dlnow - prvious_download;
 			prvious_download = dlnow;
 			myp->SetDownloadedSize(speed + myp->GetDownloadedSize());
 		} else {
-			speed = dlnow - myp->GetDownloadedSize();
-			myp->SetDownloadedSize(dlnow);
+			//if (myp->downloadType == 0) {
+			if (myp->downloadType == 0) {
+				speed = dlnow - myp->GetDownloadedSize();
+				myp->SetDownloadedSize(dlnow);
+			} else {
+				double size_downloaded = 0;
+				curl_easy_getinfo(myp->GetCurl(), CURLINFO_SIZE_DOWNLOAD, &size_downloaded);
+				speed = size_downloaded - myp->GetDownloadedSize();
+				myp->SetDownloadedSize(size_downloaded);
+			}
 		}
 
 		if (speed == 0) {
 			receive_no_data_times++;
 			if (receive_no_data_times > RECEIVE_NO_DATA_TIME_OUT) {
-				Log(_T("%s"), _T("超过10次速度为0"));
+				Log(_T("超过%d次速度为0"), RECEIVE_NO_DATA_TIME_OUT);
 				if (!CheckNetWorkWell()) { //网络不通
 					time_out_times++;
 					Log(_T("%s time_out_times:%d"), _T("测试网络，网络未联通"), time_out_times);
-					if (time_out_times > 9) {//联系9个周期没有接受到数据
-						Log(_T("%s time_out_times:%d"), _T("网络连续10个周期未联通，退出下载"), time_out_times);
+					if (time_out_times > 2) {//联系9个周期没有接受到数据
+						Log(_T("%s time_out_times:%d"), _T("网络连续3个周期未联通，退出下载"), time_out_times);
+						prvious_download = 0;
+						RECEIVE_NO_DATA_TIME_OUT = 3;
 						return 1; //退出
 					} else {
 						receive_no_data_times = 0;//在尝试一次
+						RECEIVE_NO_DATA_TIME_OUT += 2;
 						Log(_T("%s %d"), _T("在尝试一次"), receive_no_data_times);
 					}
 				} else {//网络连通 但是连续多次没接受到数据
 					Log(_T("%s"), _T("测试网络，联通,需要重新启动下载"));
 					is_need_reload = true;
+					prvious_download = 0;
+					RECEIVE_NO_DATA_TIME_OUT = 3;
 					return 1;
 				}
 			}
@@ -142,14 +160,17 @@ int DownLoad(char *url, DownloadInfo *downloadInfo) {
 		curl_easy_setopt(curl, CURLOPT_HEADER, 0);
 		curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, header_callback);
 		curl_easy_setopt(curl, CURLOPT_NOBODY, FALSE);
-		curl_easy_setopt(curl, CURLOPT_NOPROGRESS, FALSE);
 		curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 30);//连接超时10S
-		curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, xferinfo);
-		curl_easy_setopt(curl, CURLOPT_XFERINFODATA, downloadInfo);
-		//curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, xferinfo);
-		///* pass the struct pointer into the progress function */
-		//curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, downloadInfo);
+		curl_easy_setopt(curl, CURLOPT_NOPROGRESS, FALSE);
 
+		if (downloadInfo->downloadType == 0) {
+			curl_easy_setopt(curl, CURLOPT_XFERINFOFUNCTION, xferinfo);
+			curl_easy_setopt(curl, CURLOPT_XFERINFODATA, downloadInfo);
+		} else {
+			curl_easy_setopt(curl, CURLOPT_PROGRESSFUNCTION, xferinfo);
+			curl_easy_setopt(curl, CURLOPT_PROGRESSDATA, downloadInfo);
+		}
+		is_get_header = false;
 		res = curl_easy_perform(curl);
 		if (res == CURLE_OK) {
 			curl_easy_cleanup(curl);
@@ -198,8 +219,10 @@ int GetDownloadInfo(DownloadInfo *downlaodInfo, char *url) {
 
 
 int _tmain(int argc, _TCHAR* argv[]) {
-	if (argc == 1)
+	if (argc == 1) {
+		bool res = CheckNetWorkWell();
 		return -1;
+	}
 
 	if (_tcscmp(argv[1], _T("/d")) == 0) {
 		if (argc >= 5) {
@@ -245,7 +268,7 @@ int _tmain(int argc, _TCHAR* argv[]) {
 				Log(_T("%s"), _T("参数传递少，/name 后面应该有文件名"));
 				return -1;
 			}
-			 return downloadFile(inUrl, filepath, uuid, file_name);
+			return downloadFile(inUrl, filepath, uuid, file_name);
 		}
 	}
 	return 0;
@@ -259,12 +282,13 @@ int downloadFile(TCHAR *inUrl, TCHAR *filepath, TCHAR *uuid, TCHAR *file_name) {
 	char* char_uuid = WcharToChar_New(uuid);
 	DownloadInfo *downloadInfo = new DownloadInfo(url, filepath, doc_id);
 	downloadInfo->downloadType = downloadType;
+	LOGI("%d\n", downloadType);
 	downloadInfo->SetUUid(char_uuid);
 	if (_taccess_s(filepath, 0) != 0) { //如果文件夹不存在
 		int res = CreateMultiplePath(filepath);
 		if (res == 0) {
 			Log(_T("%s, %s"), _T("文件夹不存在，创建文件夹失败"), filepath);
-			fprintf(stdout, "%s\n", BuildFailedResponseJson(downloadInfo, 4, _T("文件夹路径不存在，而且创建失败")).c_str());
+			fprintf(stdout, "%s\n", BuildFailedResponseJson(downloadInfo, 4, _T("create floder failed")).c_str());
 			delete[] url;
 			delete[] char_uuid;
 			download_result = -1;

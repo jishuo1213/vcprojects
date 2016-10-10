@@ -6,6 +6,7 @@
 #include "strutil.h"
 #include <openssl/pkcs12.h>
 #include <openssl/pem.h>
+#include <openssl\cms.h>
 
 
 int dump_certs_keys_p12(BIO *out, PKCS12 *p12, char *pass, int passlen,
@@ -100,17 +101,13 @@ int parse_cert_file(const char *infile, const char *password, const char *outfil
 	LOGI("infile:%s\npassword:%s\noutfile:%s", infile, password, outfile);
 	if (infile) {
 		//open_wchar_file(infile, in_file,L"rb");
-		in = BIO_new_file(infile,"rb");
+		in = BIO_new_file(infile, "rb");
 		if (in) {
 			//open_wchar_file(outfile,out_file,L"wb");
-			if ((out = BIO_new_file(outfile,"wb"))) {
+			if (outfile == NULL) {
 				if ((p12 = d2i_PKCS12_bio(in, NULL))) {
 					if (PKCS12_verify_mac(p12, password, -1)) {
-						if (dump_certs_keys_p12(out, p12, pass, -1, 0, NULL)) {
-							ret = 0;
-						} else {
-							ret = 6;
-						}
+						ret = 0;
 					} else {
 						ret = 5;
 					}
@@ -118,7 +115,23 @@ int parse_cert_file(const char *infile, const char *password, const char *outfil
 					ret = 4;
 				}
 			} else {
-				ret = 3;
+				if ((out = BIO_new_file(outfile, "wb"))) {
+					if ((p12 = d2i_PKCS12_bio(in, NULL))) {
+						if (PKCS12_verify_mac(p12, password, -1)) {
+							if (dump_certs_keys_p12(out, p12, pass, -1, 0, NULL)) {
+								ret = 0;
+							} else {
+								ret = 6;
+							}
+						} else {
+							ret = 5;
+						}
+					} else {
+						ret = 4;
+					}
+				} else {
+					ret = 3;
+				}
 			}
 		} else {
 			ret = 2;
@@ -130,7 +143,8 @@ int parse_cert_file(const char *infile, const char *password, const char *outfil
 	if (p12)
 		PKCS12_free(p12);
 	BIO_free(in);
-	BIO_free_all(out);
+	if(out)
+		BIO_free_all(out);
 	OPENSSL_free(pass);
 	return ret;
 }
@@ -258,10 +272,10 @@ int sign(const char *signerfile, const char *pass, const char *infile, const cha
 		keyfile = cretout;
 		sk_OPENSSL_STRING_push(skkeys, keyfile);
 	}
-	//open_wchar_file(infile, in_file,L"r");
-	in = BIO_new_file(infile,"r");
+	//open_wchar_file(infile, in_file, L"r");
+	in = BIO_new_file(infile, "r");
 	if (in) {
-		//open_wchar_file(outfile, out_file,L"w");
+		//open_wchar_file(outfile, out_file, L"w");
 		if ((out = BIO_new_file(outfile, "w")) != NULL) {
 			int i;
 			if (flag & PKCS7_DETACHED) {
@@ -306,6 +320,74 @@ int sign(const char *signerfile, const char *pass, const char *infile, const cha
 	PKCS7_free(p7);
 	BIO_free(in);
 	BIO_free_all(out);
+	return ret;
+}
+
+int decrypt_cms(const char *recipfile, const char *pass, const char *infile, const char *outfile) {
+	char *outmode = "w";
+	char *inmode = "r";
+	BIO *in = NULL, *out = NULL, *indata = NULL;
+	int flags = CMS_DETACHED;
+	X509 *recip = NULL;
+	EVP_PKEY *key = NULL;
+	CMS_ContentInfo *cms = NULL;
+	flags &= CMS_DETACHED;
+	if (flags & CMS_BINARY) {
+		outmode = "wb";
+	}
+
+	char *prefix = ".cer";
+	char *cretout = (char *)OPENSSL_malloc(strlen(recipfile) + 5);
+	strcpy_s(cretout, strlen(recipfile) + 1, recipfile);
+	strcat_s(cretout, strlen(recipfile) + 5, prefix);
+	if (parse_cert_file(recipfile, pass, cretout)) {
+		LOGI(cretout);
+		OPENSSL_free(cretout);
+		return 8;
+	}
+	recip = load_cert(cretout);
+	int ret = 0;
+	if (recip) {
+		key = load_key(cretout, pass);
+		if (key) {
+			if (in = BIO_new_file(infile, inmode)) {
+				cms = SMIME_read_CMS(in, &indata);
+				if (cms) {
+					if ((out = BIO_new_file(outfile, outmode))) {
+						if (flags & CMS_DEBUG_DECRYPT) {
+							CMS_decrypt(cms, NULL, NULL, NULL, NULL, (unsigned)flags);
+						}
+						if (CMS_decrypt_set1_pkey(cms, key, recip)) {
+							if (CMS_decrypt(cms, NULL, NULL, indata, out, (unsigned)flags)) {
+								ret = 0;
+							} else {
+								ret = 7;
+							}
+						} else {
+							ret = 6;
+						}
+					} else {
+						ret = 5;
+					}
+				} else {
+					ret = 4;
+				}
+			} else {
+				ret = 3;
+			}
+		} else {
+			ret = 2;
+		}
+	} else {
+		ret = 1;
+	}
+	EVP_PKEY_free(key);
+	BIO_free(in);
+	BIO_free(indata);
+	BIO_free(out);
+	CMS_ContentInfo_free(cms);
+	X509_free(recip);
+	OPENSSL_free(cretout);
 	return ret;
 }
 
@@ -367,10 +449,10 @@ int verify_mime(const char *infile, char *outfile, const char *CAfile) {
 	X509_STORE *store = NULL;
 	//FILE *in_file = NULL, *out_file = NULL;
 	char *temp_cafile = (char*)OPENSSL_malloc(strlen(CAfile) + 1);
-	strcpy_s(temp_cafile, strlen(CAfile) + 1,CAfile);
+	strcpy_s(temp_cafile, strlen(CAfile) + 1, CAfile);
 	if (flags & PKCS7_BINARY)
 		outmode = "wb";
-	
+
 	//open_wchar_file(infile, in_file, inmode);
 	if ((in = BIO_new_file(infile, inmode))) {
 		p7 = SMIME_read_PKCS7(in, &indata);
@@ -410,13 +492,13 @@ int verify_mime(const char *infile, char *outfile, const char *CAfile) {
 	return ret;
 }
 
-void init()
-{
+
+
+void init() {
 	apps_startup();
 }
 
-void clean()
-{
+void clean() {
 	apps_shutdown();
 }
 
