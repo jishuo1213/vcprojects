@@ -18,4 +18,8 @@ int hexCharToValue(const char ch);
 
 char valueToHexCh(const int value);
 
+wchar_t* CharToWchar_New(const char *str);
+
+char* WcharToUTF8_New(const wchar_t* str);
+
 #endif //DECRYPTMAIL_STRUTIL_H

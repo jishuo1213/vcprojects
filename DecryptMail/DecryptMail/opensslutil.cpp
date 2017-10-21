@@ -98,9 +98,37 @@ X509 *load_cert(const char *file) {
 	/*FILE *cert_file = NULL;
 	open_wchar_file(file,cert_file,L"rb");
 	cert = BIO_new_fp(cert_file, BIO_CLOSE | BIO_FP_TEXT);*/
+
 	if (BIO_read_filename(cert, file) <= 0) {
 		return NULL;
 	}
+	
+	if (!cert)
+		return NULL;
+
+	//    x = PEM_read_bio_X509_AUX(cert, NULL, (pem_password_cb *) password_callback, NULL);
+	x = PEM_read_bio_X509_AUX(cert, NULL, NULL, NULL);
+
+	printf("%d \n", (x == NULL));
+	if (cert != NULL)
+		BIO_free(cert);
+	return (x);
+}
+
+X509 *w_load_cert(const wchar_t *file) {
+	X509 *x = NULL;
+	BIO *cert;
+
+	/*if ((cert = BIO_new(BIO_s_file())) == NULL) {
+		return NULL;
+	}*/
+	/*FILE *cert_file = NULL;
+	open_wchar_file(file,cert_file,L"rb");
+	cert = BIO_new_fp(cert_file, BIO_CLOSE | BIO_FP_TEXT);*/
+	cert = open_file(file, L"r", BIO_CLOSE | BIO_FP_TEXT);
+	/*if (BIO_read_filename(cert, file) <= 0) {
+		return NULL;
+	}*/
 	if (!cert)
 		return NULL;
 
@@ -153,6 +181,39 @@ EVP_PKEY *load_key(const char *file, const char *pass) {
 	return (pkey);
 }
 
+EVP_PKEY *w_load_key(const wchar_t *file, const char *pass) {
+	BIO *key = NULL;
+	EVP_PKEY *pkey = NULL;
+	//PW_CB_DATA cb_data;
+
+	//cb_data.password = pass;
+	//cb_data.prompt_info = file;
+
+	//printf("%s \n%s \n", file, pass);
+
+	/*FILE *cert_file = NULL;
+	open_wchar_file(file, cert_file, L"rb");
+	key = BIO_new_fp(cert_file, BIO_CLOSE | BIO_FP_TEXT);*/
+	//key = BIO_new(BIO_s_file());
+	//if (key == NULL) {
+	//	return NULL;
+	//}
+	//if (BIO_read_filename(key, file) <= 0) {
+	//	BIO_free(key);
+	//	return NULL;
+	//}
+	key = open_file(file, L"r", BIO_CLOSE | BIO_FP_TEXT);
+	//    pkey = PEM_read_bio_PrivateKey(key, NULL, (pem_password_cb *) password_callback, &cb_data);
+	//pkey = PEM_read_bio_PrivateKey(key, NULL, NULL, &cb_data);
+	pkey = PEM_read_bio_PrivateKey(key, NULL, NULL, NULL);
+
+
+	BIO_free(key);
+	return (pkey);
+}
+
+
+
 int dump_cert_text(BIO *out, X509 *x) {
 	char *p;
 
@@ -168,6 +229,14 @@ int dump_cert_text(BIO *out, X509 *x) {
 	OPENSSL_free(p);
 
 	return 0;
+}
+
+BIO * open_file(const wchar_t* path,const wchar_t* mode,int bio_mode) {
+	FILE* file = NULL;
+	_wfopen_s(&file,path,mode);
+	//BIO_new_file()
+	//BIO_n
+	return BIO_new_fp(file, bio_mode);
 }
 
 

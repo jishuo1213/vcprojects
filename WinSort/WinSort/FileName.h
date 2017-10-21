@@ -4,7 +4,7 @@
 class FileName
 {
 public:
-	FileName(const wchar_t *file_name);
+	FileName(const wchar_t *file_name,bool isFolder);
 	~FileName();
 	
 	bool operator<(const FileName &rhs);

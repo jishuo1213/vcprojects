@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html ng-app="Chat">
+<head lang="zh-cn">
+    <meta charset="UTF-8">
+    <title>微聊</title>
+    <link rel="stylesheet" href="../common/css/bootstrap/bootstrap.min.css"/>
+    <link rel="stylesheet" href="../common/css/bootstrap/bootstrap-theme.min.css"/>
+    <link rel="stylesheet" href="../common/plugin/ueditor/themes/default/css/wl.umeditor.css"/>
+    <link rel="stylesheet" href="../common/plugin/alert/alertConfirm.css"/>
+    <link rel="stylesheet" href="../common/plugin/loading/loading.css"/>
+    <link rel="stylesheet" href="css/weiliao.css"/>
+    <link rel="stylesheet" href="css/uploading.css"/>
+    <style type="text/css">
+        @charset "UTF-8";[ng\:cloak],[ng-cloak],[data-ng-cloak],[x-ng-cloak],.ng-cloak,.x-ng-cloak,.ng-hide{display:none !important;}ng\:form{display:block;}.ng-animate-start{clip:rect(0,auto,auto,0);-ms-zoom:1.0001;}.ng-animate-active{clip:rect(-1px,auto,auto,0);-ms-zoom:1;}
+    </style>
+</head>
+<body ng-controller="indexCtl">
+    <div class="panel panel-default" id="boardArea" ng-controller="chatBoardCtl" bn-document-click="handleClick($event)">
+        <div id="chatContent" ng-hide="showRecord">
+            <div class="panel panel-default" id="contentShow" draggable="false">
+                <div ng-cloak class="contentBody">
+                    <!--<div class="newPrivateMsgArea">-->
+                        <!--<div class="newPrivateMsg" ng-show="true" ng-repeat="item in privateUserData" ng-click="clickNewPrivateMsgHandler(item)">-->
+                            <!--<img class="privateAvatar" ng-src="{{item.avatar}}"/>-->
+                            <!--<div class="privateContent">{{item.content}}</div>-->
+                        <!--</div>-->
+                    <!--</div>-->
+                    <div class="inChatContent widget-content padded" con-bg-image="{{contentBackImage}}" bg-color="{{contentBackColor}}" id="boardContentArea" scroll-glue="glueAuto" ng-controller="chatBoardCtl.contentCtl">
+                        <ul chat-accordion>
+                            <chat ng-repeat='item in chatContentItems' content-type='contentType' chat-item='item' date-filter="dateFilter" on-finish-render-filters>
+                            </chat>
+                        </ul>
+                    </div>
+                    <div class="nowChatting" ng-show="showAddMember" id="nowChatting" bg-color="{{sideBackColor}}" onmousewheel="onMouseWheelHandler(event)">
+                        <div class="{{item.isNull ? 'nullDiv' : 'members'}}" ng-repeat="item in nowChatting">
+                            <div class="memberAvatar" title="{{item.name}}" bg-image="{{setShowAvatar(item.avatar)}}" ng-click="clickDeleteNowChattingHandler(item, 1)" ng-mousemove="showDelete=true" ng-mouseleave="showDelete=false">
+                                <div class="littleHandleIcon deleteMember" title="删除人员" ng-if="showDelete && showSelect" ng-click="clickDeleteNowChattingHandler(item, 1)">-</div>
+                            </div>
+                            <div class="memberName" font-color="{{sideFontColor}}">{{item.name}}</div>
+                        </div>
+                    </div>
+                    <div class="upArrow showArrow"  ng-show="showAddMember" bg-color="{{sideBackColor}}" ng-click="clickUpArrowHandler()">
+                        <div class="upArrowIcon"></div>
+                    </div>
+                    <div class="downArrow showArrow" ng-show="showAddMember" bg-color="{{sideBackColor}}" ng-click="clickDownArrowHandler()">
+                        <div class="downArrowIcon"></div>
+                    </div>
+                    <!--<div class="handleArea" bg-color="{{sideBackColor}}" ng-if="showSelect">-->
+                    <div class="handleArea" ng-if="showSelect">
+                        <div class="handleBtn cancelBtn" ng-click="clickCancelNowChattingHandler()"></div>
+                        <div class="handleBtn okBtn" ng-class="{readOnly: !chatIsOnline}" ng-click="clickOkNowChattingHandler()"></div>
+                    </div>
+                    <div class="selectPersonBtn" ng-show="showAddMember" ng-class="{readOnly: !chatIsOnline}" ng-click="clickSelectPersonHandler();chatItemsToAddMemberHandler()">
+                        <div class="selectPersonIcon"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="panel panel-default" id="contentEdit" ng-controller="chatBoardCtl.contentEditCtl">
+                <hr class="separationUe"/>
+                <div class="transformToMail" ng-class="{readOnly: !chatIsOnline}" ng-if="showNewMail" title="新邮件" ng-click="clickTransformToMailHandler()"></div>
+                <div id="contentInput">
+                    <script class="editor" id="editor" type="text/plain"></script>
+                    <div id="sendArea">
+                        <a class="sendButton" ng-class="{readOnly: !chatIsOnline}" type="button" ng-click="clickSendMessageHandler()">发送</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div ng-if="showPrivate" ng-include="'privateChat.html'"></div>
+        <div ng-if="showHistoryMembers" ng-include="'historyMembers.html'"></div>
+        <div ng-show="msgDailogs" class="msgDailog" ng-mouseover="mouseOverMsgDailogHandler()" ng-mouseleave="mouseLeaveMsgDailogHandler()">
+            <div class="_content" ng-cloak="">
+                <div class="menuShow">
+                    <div class="menuShow_item" ng-repeat='item in menuDailogs'>
+                        <button class="memberName"  style="width: 70px" ng-click="doClickHandler(item,$event)">{{item.name}}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="emoticonContainer">
+            <div class="emoticonImages"></div>
+        </div>
+        <div class="taskProgressBtn" ng-show="taskProgress" ng-click="taskProgressEditUp()">
+            任务进度情况<div class="taskProgressBtnIcon" title="展开"></div>
+        </div>
+        <div class="taskProgress" ng-show="taskProgressLi">
+            <div class="taskProgress_move" title="拉升"></div>
+            <div class="taskProgressEditIcon" title="收缩" ng-click="taskProgressEditDown()"></div>
+            <textarea class="taskProgressContent" ng-focus="taskProgressEditorFocus($event)" ng-blur="taskProgressEditor($event)"></textarea>
+            <div class="taskProgressContentLi">
+                <div ng-repeat='item in taskProgressList '>
+                    <div class="li_icon"></div>
+                    <div class="taskProgressLiContent">
+                        <p>{{item.key}}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div ng-if="showSelect" ng-cloak class="addMemberContainer">
+        <div ng-include="'addMember.html'"></div>
+    </div>
+    <div class="newTaskChat" ng-if="!canHandleChat"></div>
+</body>
+<script src= "../common/lib/jquery.min.js"></script>
+<script src= "../common/lib/angular.js"></script>
+<script src= "../common/plugin/pmjs/socket.io-1.4.5.js"></script>
+<script src= "../common/lib/Base64.js"></script>
+<script src= "../common/lib/bootstrap.min.js"></script>
+<script src="./js/DateUtil.js"></script>
+<script src= "../common/plugin/alert/alertConfirm.js"></script>
+<script src= "../common/plugin/ueditor/wl.umeditor.js"></script>
+<script src= "../common/plugin/ueditor/wl.umeditor.config.js"></script>
+<script src= "../common/plugin/ueditor_extends/keystrokes.js"></script>
+<script src="../common/plugin/CryptoJS/components/core-min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../common/plugin/CryptoJS/rollups/aes.js" type="text/javascript" charset="utf-8"></script>
+<script src="../common/plugin/CryptoJS/components/mode-ecb-min.js" type="text/javascript" charset="utf-8"></script>
+<script src="../common/plugin/CryptoJS/EDCryption.js" type="text/javascript" charset="utf-8"></script>
+<script src="../../config/config.js" type="text/javascript" charset="utf-8"></script>
+<script src="../common/plugin/loading/loading.js" type="text/javascript" charset="utf-8"></script>
+<script src="../common/plugin/commonModule/ondrag.js"></script>
+<script src="js/uploadFile.js"></script>
+<script src= "js/controllers.js"></script>
+<script src= "js/mainControllers.js"></script>
+<script src= "js/chatBoardControllers.js"></script>
+<script src="js/emoticon.js"></script>
+<script src= "js/addMemberController.js"></script>
+<script src= "js/historyMemberCtl.js"></script>
+<script src= "js/filters.js"></script>
+<script src= "js/directives.js"></script>
+<script src= "js/services.js"></script>
+<script src= "js/factorys.js"></script>
+<script>
+    var ue;
+    function initIndex() {
+        ue = UM.getEditor('editor');
+    }
+    initIndex();
+</script>
+</html>

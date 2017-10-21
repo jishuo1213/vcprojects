@@ -16,11 +16,14 @@ public:
 		LPCSTR temp_folder_id = upload_info["folderId"].asCString();
 		LPCSTR temp_user_id = upload_info["userId"].asCString();
 		LPCSTR temp_uuid = upload_info["uuid"].asCString();
+		LPCSTR temp_server_url = upload_info["serverUrl"].asCString();
+
 
 		disk_id = CopyCstring(temp_disk_id);
 		folder_id = CopyCstring(temp_folder_id);
 		user_id = CopyCstring(temp_user_id);
 		uuid = CopyCstring(temp_uuid);
+		server_url = CopyCstring(temp_server_url);
 
 		TCHAR *extension = PathFindExtensionW(file_path);
 		TCHAR *fileName = PathFindFileNameW(file_path);
@@ -58,6 +61,10 @@ public:
 		return file_path;
 	}
 
+	const char* GetServerUrl() {
+		return server_url;
+	}
+
 	FILE* GetUpFileFd() {
 		return upload_fd;
 	}
@@ -84,6 +91,7 @@ public:
 		delete[] disk_id;
 		delete[] folder_id;
 		delete[] uuid;
+		delete[] server_url;
 	}
 
 
@@ -95,6 +103,7 @@ private:
 	const char* file_name;
 	const char* mime_type;
 	const char* uuid;
+	const char* server_url;
 	FILE* upload_fd;
 	FILE_LENGTH upfile_size;
 	CURL *curl;

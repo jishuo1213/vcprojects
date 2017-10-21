@@ -21,12 +21,12 @@ int main() {
 	//ma.body().parts().push_back(pme);
 
 	//std::cout << ma << std::endl;
-	std::string list = R"([{"mime_type":"bb","size":1234312,"mime_name":"aaaa","path":"D:\\Mail\\havefile.eml"},{"mime_type":"bb","size":1234312,"mime_name":"aaaa","path":"D:\\Mail\\havefile.eml"},{"mime_type":"bb","size":1234312,"mime_name":"aaaa","path":"D:\\Mail\\havefile.eml"}])";
+	std::string list = R"([{"mime_type":"bb","size":75795,"mime_name":"aaaa","path":"D:\\aaa.eml"}])";
 	//Json::Reader reader;
 	//Json::Value root;
 	//if (reader.parse(list, root)) {
 	//	std::cout << root.size() << std::endl;
 	//}
 	//GenerateMultiAlternative("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "D:\\aaa.txt");
-	GenerateMutiMix("aaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "D:\\aaa.txt", list.c_str());
+	GenerateMutiMix("aaaaaaaaaaaaaaaaaaaaaaaaaaaaa", L"D:\\aaa.txt", list.c_str());
 }

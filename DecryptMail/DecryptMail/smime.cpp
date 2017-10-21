@@ -6,7 +6,7 @@
 #include "strutil.h"
 #include <openssl/pkcs12.h>
 #include <openssl/pem.h>
-#include <openssl\cms.h>
+#include <openssl/cms.h>
 
 
 int dump_certs_keys_p12(BIO *out, PKCS12 *p12, char *pass, int passlen,
@@ -91,6 +91,83 @@ int decrypt_smime(const char *recipfile, const char *pass, const char *infile,
 	return ret;
 }
 
+
+
+int w_decrypt_smime(const char *recipfile, const char *pass, const char *infile,
+	const char *outfile) {
+
+	X509 *recip = NULL;
+	const wchar_t *keyfile = NULL;
+	EVP_PKEY *key = NULL;
+	BIO *in = NULL, *out = NULL, *indata = NULL;
+	PKCS7 *p7 = NULL;
+	int flags = PKCS7_DETACHED;
+	if (!recipfile)
+		return 1;
+	char *prefix = ".cer";
+	char *cretout = (char *)OPENSSL_malloc(strlen(recipfile) + 5);
+	strcpy_s(cretout, strlen(recipfile) + 1, recipfile);
+	strcat_s(cretout, strlen(recipfile) + 5, prefix);
+	wchar_t* w_recipfile = CharToWchar_New(recipfile);
+	wchar_t* w_cretout = CharToWchar_New(cretout);
+	wchar_t* w_infile = CharToWchar_New(infile);
+	wchar_t* w_outfile = CharToWchar_New(outfile);
+
+
+	if (w_parse_cert_file(w_recipfile, pass, w_cretout)) {
+		LOGI(cretout);
+		OPENSSL_free(cretout);
+		delete[] w_recipfile;
+		delete[] w_cretout;
+		delete[] w_infile;
+		delete[] w_outfile;
+		return 8;
+	}
+	recip = w_load_cert(w_cretout);
+	int ret = 0;
+	if (recip) {
+		keyfile = w_cretout;
+		key = w_load_key(keyfile, pass);
+		if (key) {
+			if ((in = open_file(w_infile, L"r", BIO_CLOSE))) {
+				p7 = SMIME_read_PKCS7(in, &indata);
+				if (p7) {
+					out = open_file(w_outfile, L"w", BIO_CLOSE);
+					if (out) {
+						flags &= ~PKCS7_DETACHED;
+						if (PKCS7_decrypt(p7, key, recip, out, flags))
+							ret = 0;
+						else
+							ret = 7;
+					} else {
+						ret = 6;
+					}
+				} else {
+					ret = 5;
+				}
+			} else {
+				ret = 4;
+			}
+		} else {
+			ret = 3;
+		}
+	} else {
+		ret = 2;
+	}
+	delete[] w_recipfile;
+	delete[] w_cretout;
+	delete[] w_infile;
+	delete[] w_outfile;
+	X509_free(recip);
+	EVP_PKEY_free(key);
+	BIO_free(in);
+	BIO_free(indata);
+	BIO_free_all(out);
+	PKCS7_free(p7);
+	OPENSSL_free(cretout);
+	return ret;
+}
+
 int parse_cert_file(const char *infile, const char *password, const char *outfile) {
 	BIO *in = NULL, *out = NULL;
 	PKCS12 *p12 = NULL;
@@ -143,7 +220,66 @@ int parse_cert_file(const char *infile, const char *password, const char *outfil
 	if (p12)
 		PKCS12_free(p12);
 	BIO_free(in);
-	if(out)
+	if (out)
+		BIO_free_all(out);
+	OPENSSL_free(pass);
+	return ret;
+}
+
+int w_parse_cert_file(const wchar_t *infile, const char *password, const wchar_t *outfile) {
+	BIO *in = NULL, *out = NULL;
+	PKCS12 *p12 = NULL;
+	char *pass = (char *)OPENSSL_malloc(strlen(password) + 1);
+	strcpy_s(pass, strlen(password) + 1, password);
+	int ret = 0;
+	//FILE *in_file = NULL, *out_file = NULL;
+	//LOGI("infile:%s\npassword:%s\noutfile:%s", infile, password, outfile);
+	if (infile) {
+		//open_wchar_file(infile, in_file,L"rb");
+		//in = BIO_new_file(infile, "rb");
+		in = open_file(infile, L"rb", BIO_CLOSE);
+		if (in) {
+			//open_wchar_file(outfile,out_file,L"wb");
+			if (outfile == NULL) {
+				if ((p12 = d2i_PKCS12_bio(in, NULL))) {
+					if (PKCS12_verify_mac(p12, password, -1)) {
+						ret = 0;
+					} else {
+						ret = 5;
+					}
+				} else {
+					ret = 4;
+				}
+			} else {
+				if ((out = open_file(outfile, L"wb", BIO_CLOSE))) {
+					if ((p12 = d2i_PKCS12_bio(in, NULL))) {
+						if (PKCS12_verify_mac(p12, password, -1)) {
+							if (dump_certs_keys_p12(out, p12, pass, -1, 0, NULL)) {
+								ret = 0;
+							} else {
+								ret = 6;
+							}
+						} else {
+							ret = 5;
+						}
+					} else {
+						ret = 4;
+					}
+				} else {
+					ret = 3;
+				}
+			}
+		} else {
+			ret = 2;
+		}
+	} else {
+		ret = 1;
+	}
+	LOGI("ret = %d", ret);
+	if (p12)
+		PKCS12_free(p12);
+	BIO_free(in);
+	if (out)
 		BIO_free_all(out);
 	OPENSSL_free(pass);
 	return ret;
@@ -323,6 +459,110 @@ int sign(const char *signerfile, const char *pass, const char *infile, const cha
 	return ret;
 }
 
+int w_sign(const char *signerfile, const char *pass, const char *infile, const char *outfile) {
+	STACK_OF(OPENSSL_STRING) *sksigners = NULL, *skkeys = NULL;
+	const char *keyfile = NULL;
+	const wchar_t *w_keyfile = NULL;
+	int flag = PKCS7_DETACHED;
+	int ret = 0;
+	//FILE *in_file = NULL, *out_file = NULL;
+	BIO *in = NULL, *out = NULL;
+	EVP_PKEY *key = NULL;
+	PKCS7 *p7 = NULL;
+	X509 *signer = NULL;
+
+	char *prefix = ".cer";
+	char *cretout = (char *)OPENSSL_malloc(strlen(signerfile) + 5);
+	strcpy_s(cretout, strlen(signerfile) + 1, signerfile);
+	strcat_s(cretout, strlen(signerfile) + 5, prefix);
+	wchar_t* w_recipfile = CharToWchar_New(signerfile);
+	wchar_t* w_cretout = CharToWchar_New(cretout);
+	wchar_t* w_infile = CharToWchar_New(infile);
+	wchar_t* w_outfile = CharToWchar_New(outfile);
+
+	if (w_parse_cert_file(w_recipfile, pass, w_cretout)) {
+		LOGI(cretout);
+		OPENSSL_free(cretout);
+		delete[] w_recipfile;
+		delete[] w_cretout;
+		delete[] w_infile;
+		delete[] w_outfile;
+		return 8;
+	}
+
+	//char *prefix = ".cer";
+	//char *cretout = (char *)OPENSSL_malloc(strlen(signerfile) + 5);
+	//strcpy_s(cretout, strlen(signerfile) + 1, signerfile);
+	//strcat_s(cretout, strlen(signerfile) + 5, prefix);
+	//if (parse_cert_file(signerfile, pass, cretout)) {
+	//	OPENSSL_free(cretout);
+	//	return 8;
+	//}
+	if (w_cretout) {
+		sksigners = sk_OPENSSL_STRING_new_null();
+		sk_OPENSSL_STRING_push(sksigners, cretout);
+		skkeys = sk_OPENSSL_STRING_new_null();
+		keyfile = cretout;
+		w_keyfile = w_cretout;
+		sk_OPENSSL_STRING_push(skkeys, keyfile);
+	}
+	//open_wchar_file(infile, in_file, L"r");
+	//in = BIO_new_file(infile, "r");
+	in = open_file(w_infile, L"r", BIO_CLOSE);
+	if (in) {
+		//open_wchar_file(outfile, out_file, L"w");
+		if ((out = open_file(w_outfile, L"w",BIO_CLOSE)) != NULL) {
+			int i;
+			if (flag & PKCS7_DETACHED) {
+				flag |= PKCS7_STREAM;
+				flag |= PKCS7_PARTIAL;
+				p7 = PKCS7_sign(NULL, NULL, NULL, in, flag);
+				if (p7) {
+					LOGI("length %d\n", sk_OPENSSL_STRING_num(sksigners));
+					for (i = 0; i < sk_OPENSSL_STRING_num(sksigners); i++) {
+						cretout = sk_OPENSSL_STRING_value(sksigners, i);
+						keyfile = sk_OPENSSL_STRING_value(skkeys, i);
+						signer = w_load_cert(w_cretout);
+						if (signer) {
+							key = w_load_key(w_keyfile, pass);
+							if (key) {
+								if (!PKCS7_sign_add_signer(p7, signer, key, NULL, flag)) {
+									X509_free(signer);
+									EVP_PKEY_free(key);
+									ret = 6;
+								} else {
+									X509_free(signer);
+									EVP_PKEY_free(key);
+								}
+							} else {
+								ret = 5;
+							}
+						} else {
+							ret = 4;
+						}
+					}
+					SMIME_write_PKCS7(out, p7, in, flag);
+				} else {
+					ret = 3;
+				}
+			}
+		} else {
+			ret = 2;
+		}
+	} else {
+		ret = 1;
+	}
+	delete[] w_recipfile;
+	delete[] w_cretout;
+	delete[] w_infile;
+	delete[] w_outfile;
+	OPENSSL_free(cretout);
+	PKCS7_free(p7);
+	BIO_free(in);
+	BIO_free_all(out);
+	return ret;
+}
+
 int decrypt_cms(const char *recipfile, const char *pass, const char *infile, const char *outfile) {
 	char *outmode = "w";
 	char *inmode = "r";
@@ -391,6 +631,100 @@ int decrypt_cms(const char *recipfile, const char *pass, const char *infile, con
 	return ret;
 }
 
+
+int w_decrypt_cms(const char *recipfile, const char *pass, const char *infile, const char *outfile) {
+	wchar_t *outmode = L"w";
+	wchar_t *inmode = L"r";
+	BIO *in = NULL, *out = NULL, *indata = NULL;
+	int flags = CMS_DETACHED;
+	X509 *recip = NULL;
+	EVP_PKEY *key = NULL;
+	CMS_ContentInfo *cms = NULL;
+	flags &= CMS_DETACHED;
+	if (flags & CMS_BINARY) {
+		outmode = L"wb";
+	}
+
+	char *prefix = ".cer";
+	char *cretout = (char *)OPENSSL_malloc(strlen(recipfile) + 5);
+	strcpy_s(cretout, strlen(recipfile) + 1, recipfile);
+	strcat_s(cretout, strlen(recipfile) + 5, prefix);
+	wchar_t* w_recipfile = CharToWchar_New(recipfile);
+	wchar_t* w_cretout = CharToWchar_New(cretout);
+	wchar_t* w_infile = CharToWchar_New(infile);
+	wchar_t* w_outfile = CharToWchar_New(outfile);
+
+
+	if (w_parse_cert_file(w_recipfile, pass, w_cretout)) {
+		LOGI(cretout);
+		OPENSSL_free(cretout);
+		delete[] w_recipfile;
+		delete[] w_cretout;
+		delete[] w_infile;
+		delete[] w_outfile;
+		return 8;
+	}
+
+	//char *prefix = ".cer";
+	//char *cretout = (char *)OPENSSL_malloc(strlen(recipfile) + 5);
+	//strcpy_s(cretout, strlen(recipfile) + 1, recipfile);
+	//strcat_s(cretout, strlen(recipfile) + 5, prefix);
+	//if (parse_cert_file(recipfile, pass, cretout)) {
+	//	LOGI(cretout);
+	//	OPENSSL_free(cretout);
+	//	return 8;
+	//}
+	recip = w_load_cert(w_cretout);
+	int ret = 0;
+	if (recip) {
+		key = w_load_key(w_cretout, pass);
+		if (key) {
+			if (in = open_file(w_infile, inmode,BIO_CLOSE)) {
+				cms = SMIME_read_CMS(in, &indata);
+				if (cms) {
+					if ((out = open_file(w_outfile, outmode,BIO_CLOSE))) {
+						if (flags & CMS_DEBUG_DECRYPT) {
+							CMS_decrypt(cms, NULL, NULL, NULL, NULL, (unsigned)flags);
+						}
+						if (CMS_decrypt_set1_pkey(cms, key, recip)) {
+							if (CMS_decrypt(cms, NULL, NULL, indata, out, (unsigned)flags)) {
+								ret = 0;
+							} else {
+								ret = 7;
+							}
+						} else {
+							ret = 6;
+						}
+					} else {
+						ret = 5;
+					}
+				} else {
+					ret = 4;
+				}
+			} else {
+				ret = 3;
+			}
+		} else {
+			ret = 2;
+		}
+	} else {
+		ret = 1;
+	}
+
+	delete[] w_recipfile;
+	delete[] w_cretout;
+	delete[] w_infile;
+	delete[] w_outfile;
+	EVP_PKEY_free(key);
+	BIO_free(in);
+	BIO_free(indata);
+	BIO_free(out);
+	CMS_ContentInfo_free(cms);
+	X509_free(recip);
+	OPENSSL_free(cretout);
+	return ret;
+}
+
 int encrypt_mime(const char *recipfile, const char *infile, const char *outfile) {
 	const EVP_CIPHER *chiper = EVP_des_ede3_cbc();
 	STACK_OF(X509) *encerts = NULL;
@@ -433,8 +767,56 @@ int encrypt_mime(const char *recipfile, const char *infile, const char *outfile)
 	PKCS7_free(p7);
 	BIO_free(in);
 	BIO_free_all(out);
-	//OPENSSL_free(cretout);
-//    X509_free(cert);
+	return ret;
+}
+
+int w_encrypt_mime(const char *recipfile, const char *infile, const char *outfile) {
+	const EVP_CIPHER *chiper = EVP_des_ede3_cbc();
+	STACK_OF(X509) *encerts = NULL;
+	X509 *cert = NULL;
+	int ret = 0;
+	BIO *in = NULL, *out = NULL;
+	PKCS7 *p7 = NULL;
+	//FILE *in_file = NULL, *out_file = NULL;
+	int flags = PKCS7_DETACHED;
+	wchar_t* w_infile = CharToWchar_New(infile);
+	wchar_t* w_outfile = CharToWchar_New(outfile);
+	if (chiper) {
+		encerts = sk_X509_new_null();
+		cert = load_cert_by_string(recipfile);
+		if (cert) {
+			sk_X509_push(encerts, cert);
+			//open_wchar_file(infile, in_file, L"r");
+			if ((in = open_file(w_infile, L"r",BIO_CLOSE))) {
+				//open_wchar_file(outfile, out_file, L"w");
+				if (((out = open_file(w_outfile, L"w",BIO_CLOSE)))) {
+					flags &= ~PKCS7_DETACHED;
+					LOGI("%x", flags);
+					p7 = PKCS7_encrypt(encerts, in, chiper, flags);
+					if (p7) {
+						SMIME_write_PKCS7(out, p7, in, flags);
+					} else {
+						ret = 5;
+					}
+				} else {
+					ret = 4;
+				}
+			} else {
+				ret = 3;
+			}
+		} else {
+			ret = 2;
+		}
+	} else {
+		ret = 1;
+	}
+
+	delete[] w_infile;
+	delete[] w_outfile;
+ 	sk_X509_pop_free(encerts, X509_free);
+	PKCS7_free(p7);
+	BIO_free(in);
+	BIO_free_all(out);
 	return ret;
 }
 
@@ -492,6 +874,62 @@ int verify_mime(const char *infile, char *outfile, const char *CAfile) {
 	return ret;
 }
 
+
+int w_verify_mime(const char *infile, char *outfile, const char *CAfile) {
+	BIO *in = NULL, *out = NULL;
+	int ret = 0;
+	int flags = PKCS7_DETACHED;
+	flags &= ~PKCS7_DETACHED;
+	wchar_t *outmode = L"w", *inmode = L"r";
+	PKCS7 *p7 = NULL;
+	BIO *indata = NULL;
+	X509_STORE *store = NULL;
+	//FILE *in_file = NULL, *out_file = NULL;
+	char *temp_cafile = (char*)OPENSSL_malloc(strlen(CAfile) + 1);
+	strcpy_s(temp_cafile, strlen(CAfile) + 1, CAfile);
+	if (flags & PKCS7_BINARY)
+		outmode = L"wb";
+
+	wchar_t* w_infile = CharToWchar_New(infile);
+	wchar_t* w_outfile = CharToWchar_New(outfile);
+	//open_wchar_file(infile, in_file, inmode);
+	if ((in = open_file(w_infile, inmode,BIO_CLOSE))) {
+		p7 = SMIME_read_PKCS7(in, &indata);
+		if (p7) {
+			//open_wchar_file(outfile, out_file, outmode);
+			if ((out = open_file(w_outfile, outmode,BIO_CLOSE))) {
+				if ((store = setup_verify(temp_cafile, NULL))) {
+					X509_STORE_set_verify_cb(store, smime_cb);
+					STACK_OF(X509) *signers;
+					if (PKCS7_verify(p7, NULL, store, indata, out, flags)) {
+						signers = PKCS7_get0_signers(p7, NULL, flags);
+						if (!save_certs(NULL, signers))
+							ret = 5;
+						sk_X509_free(signers);
+					} else {
+						ret = 4;
+					}
+				} else {
+					ret = 6;
+				}
+			} else {
+				ret = 3;
+			}
+		} else {
+			ret = 2;
+		}
+	} else {
+		ret = 1;
+	}
+
+	BIO_free(in);
+	BIO_free(out);
+	BIO_free(indata);
+	PKCS7_free(p7);
+	X509_STORE_free(store);
+	OPENSSL_free(temp_cafile);
+	return ret;
+}
 
 
 void init() {

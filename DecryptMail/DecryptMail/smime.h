@@ -21,4 +21,16 @@ int decrypt_cms(const char *recipfile, const char *pass, const char *infile, con
 
 int parse_cert_file(const char *infile, const char *password, const char *outfile);
 
+int w_parse_cert_file(const wchar_t *infile, const char *password, const wchar_t *outfile);
+
+int w_decrypt_smime(const char *recipfile, const char *pass, const char *infile, const char *outfile);
+
+int w_sign(const char *signerfile, const char *pass, const char *infile, const char *outfile);
+
+int w_decrypt_cms(const char *recipfile, const char *pass, const char *infile, const char *outfile);
+
+int w_encrypt_mime(const char *recipfile, const char *infile, const char *outfile);
+
+int w_verify_mime(const char *infile, char *outfile, const char *CAfile);
+
 #endif //DECRYPTMAIL_SMIME_H

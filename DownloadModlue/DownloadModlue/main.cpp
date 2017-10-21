@@ -3,7 +3,7 @@
 
 static int downloadFile(TCHAR *inUrl, TCHAR *filepath, TCHAR *uuid, TCHAR *file_name);
 
-int RECEIVE_NO_DATA_TIME_OUT = 3;
+int RECEIVE_NO_DATA_TIME_OUT = 10;
 static FILE *fp = NULL;
 static int receive_no_data_times = 0;
 int time_out_times = 0;
@@ -22,15 +22,17 @@ static size_t write_callback(void *ptr, size_t size, size_t nmemb, void *stream)
 			_tfopen_s(&fp, filePath, _T("ab"));
 		}
 	}
+
 	if (fp) {
 		fwrite(ptr, size, nmemb, fp);
 	}
 	return written;
 }
 
-static size_t header_callback(void *ptr, size_t size, size_t rmemb, void *stream) {
+static size_t header_callback(void *ptr, size_t size, size_t rmemb, void *stream) {     
 	DownloadInfo *downloadInfo = (DownloadInfo*)stream;
 	char *str = (char*)ptr;
+	//printf("%s\n", str);
 	is_get_header = true;
 	if (!downloadInfo->GetFileName() && strstr(str, "Content-Disposition")) {
 		char *src = strstr(str, "filename=");
@@ -85,7 +87,7 @@ static int xferinfo(void *p, curl_off_t dltotal, curl_off_t dlnow, curl_off_t ul
 			} else {
 				double size_downloaded = 0;
 				curl_easy_getinfo(myp->GetCurl(), CURLINFO_SIZE_DOWNLOAD, &size_downloaded);
-				speed = size_downloaded - myp->GetDownloadedSize();
+				speed = size_downloaded - myp ->GetDownloadedSize();
 				myp->SetDownloadedSize(size_downloaded);
 			}
 		}
@@ -149,6 +151,7 @@ int DownLoad(char *url, DownloadInfo *downloadInfo) {
 			strcat_s(get_url, src_url_length + 17, "&resume_flg=true");
 			Log(_T("开始断点下载 %d"), downloadInfo->GetDownloadedSize());
 		} else {
+			downloadInfo->create_temp_file();
 			get_url = new char[src_url_length + 1];
 			strcpy_s(get_url, src_url_length + 1, url);
 		}
@@ -221,15 +224,16 @@ int GetDownloadInfo(DownloadInfo *downlaodInfo, char *url) {
 int _tmain(int argc, _TCHAR* argv[]) {
 	if (argc == 1) {
 		bool res = CheckNetWorkWell();
+		printf("%d\n", res);
 		return -1;
 	}
 
 	if (_tcscmp(argv[1], _T("/d")) == 0) {
 		if (argc >= 5) {
-			TCHAR * inUrl = argv[2];
-			TCHAR* filepath = argv[3];
-			TCHAR* uuid = argv[4];
-			TCHAR * file_name = NULL;
+			TCHAR * inUrl = argv[2];//下载地址
+			TCHAR* filepath = argv[3];//文件保存路径
+			TCHAR* uuid = argv[4];//文件编号
+			TCHAR * file_name = NULL;//文件名
 
 			if (argc > 6) {
 				if (_tcscmp(argv[5], _T("/name")) == 0) {
@@ -282,7 +286,7 @@ int downloadFile(TCHAR *inUrl, TCHAR *filepath, TCHAR *uuid, TCHAR *file_name) {
 	char* char_uuid = WcharToChar_New(uuid);
 	DownloadInfo *downloadInfo = new DownloadInfo(url, filepath, doc_id);
 	downloadInfo->downloadType = downloadType;
-	LOGI("%d\n", downloadType);
+	//LOGI("%d\n", downloadType);
 	downloadInfo->SetUUid(char_uuid);
 	if (_taccess_s(filepath, 0) != 0) { //如果文件夹不存在
 		int res = CreateMultiplePath(filepath);

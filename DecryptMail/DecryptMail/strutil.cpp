@@ -3,6 +3,7 @@
 //
 #include "strutil.h"
 #include <string.h>
+#include <Windows.h>
 
 int strToHex(unsigned char *ch, int length, char *hex) {
 	int high, low;
@@ -89,4 +90,25 @@ char valueToHexCh(const int value) {
 	}
 
 	return result;
+}
+
+wchar_t * CharToWchar_New(const char * str)
+{
+	int nLen = MultiByteToWideChar(CP_ACP, 0, str, -1, NULL, 0);
+	if (nLen == 0) {
+		return NULL;
+	}
+	wchar_t* pResult = new wchar_t[nLen + 1];
+	ZeroMemory(pResult, nLen + 1);
+	MultiByteToWideChar(CP_ACP, 0, str, -1, pResult, nLen);
+	return pResult;
+}
+
+char * WcharToUTF8_New(const wchar_t * str)
+{
+	int  iLength = WideCharToMultiByte(CP_UTF8, 0, str, -1, NULL, 0, NULL, NULL);
+	char *url = new char[iLength + 1];
+	ZeroMemory(url, iLength + 1);
+	WideCharToMultiByte(CP_UTF8, 0, str, -1, url, iLength, NULL, NULL);
+	return url;
 }

@@ -5,9 +5,8 @@
 #include <tchar.h>
 #include <Windows.h>
 
-static WCHAR* CharToWchar_New(const char *str);
 
-void GenerateMultiAlternative(const char *content, const char *outFileName) {
+void GenerateMultiAlternative(const char *content, const wchar_t *outFileName) {
 	mimetic::MultipartAlternative ma;
 	ma.header().push_back(mimetic::Field("Mime-Version", "1.0"));
 
@@ -22,7 +21,7 @@ void GenerateMultiAlternative(const char *content, const char *outFileName) {
 	output.close();
 }
 
-void GenerateMutiMix(const char *content, const char *out_file_name, const char *file_list) {
+void GenerateMutiMix(const char *content, const wchar_t *out_file_name, const char *file_list) {
 
 	mimetic::MultipartMixed *me = new mimetic::MultipartMixed();
 	(*me).header().push_back(mimetic::Field("Mime-Version", "1.0"));
@@ -56,10 +55,11 @@ void GenerateMutiMix(const char *content, const char *out_file_name, const char 
 		strcat_s(content_type, file_type_len + file_name_len + 22, file_name);
 		file_part->header().push_back(mimetic::Field(content_type));
 
-		char *content_dis = new char[44 + file_name_len];
-		ZeroMemory(content_dis, 44 + file_name_len);
-		strcat_s(content_dis, 44, "Content-Disposition : attachment; filename=");
-		strcat_s(content_dis, file_name_len + 44, file_name);
+		char *content_dis = new char[44 + file_name_len +2];
+		ZeroMemory(content_dis, 44 + file_name_len + 2);
+		strcat_s(content_dis, 45, "Content-Disposition : attachment; filename=\"");
+		strcat_s(content_dis, file_name_len + 45, file_name);
+		strcat_s(content_dis, file_name_len + 46, "\"");
 		file_part->header().push_back(mimetic::Field(content_dis));
 
 
@@ -107,7 +107,7 @@ void GenerateMutiMix(const char *content, const char *out_file_name, const char 
 
 
 
-static WCHAR* CharToWchar_New(const char *str) {
+ wchar_t* CharToWchar_New(const char *str) {
 	int nLen = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
 	if (nLen == 0) {
 		return NULL;

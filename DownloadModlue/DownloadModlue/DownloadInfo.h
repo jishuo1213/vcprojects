@@ -91,6 +91,7 @@ public:
 	bool check_progress_time(double &curtime);
 	double get_cur_run_time();
 	bool check_is_tempfile_exits();
+	void create_temp_file();
 	int RenameFileAfterDownload();
 
 	void SetFileSize(FILE_LENGTH size)

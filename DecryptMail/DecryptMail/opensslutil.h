@@ -62,4 +62,10 @@ void destroy_ui_method(void);
 
 int dump_cert_text(BIO *out, X509 *x);
 
+BIO* open_file(const wchar_t* path, const wchar_t* mode,int bio_mode);
+
+X509 *w_load_cert(const wchar_t *file);
+
+EVP_PKEY *w_load_key(const wchar_t *file, const char *pass);
+
 #endif //DECRYPTMAIL_OPENSSLUTIL_H

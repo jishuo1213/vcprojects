@@ -80,7 +80,7 @@ int UploadFile(UploadInfo *uploadInfo) {
 	headerlist = curl_slist_append(headerlist, buf);
 
 	if (curl && multi_handle) {
-		curl_easy_setopt(curl, CURLOPT_URL, "http://dcp.inspur.com:81/wpserver/upload-api");
+		curl_easy_setopt(curl, CURLOPT_URL, uploadInfo->GetServerUrl());
 		curl_easy_setopt(curl, CURLOPT_VERBOSE, 0L);
 
 		curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);

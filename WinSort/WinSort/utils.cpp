@@ -1,7 +1,7 @@
 #include "stdafx.h"
 #include "utils.h"
 #include <cctype>
-#include <Windows.h>
+
 
 WCharType getWcharType(const wchar_t & ch) {
 	if (iswalnum(ch)) {
